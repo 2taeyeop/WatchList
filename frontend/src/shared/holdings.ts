@@ -1,5 +1,5 @@
 // 다이제스트 신호(신호등 + 지표)를 내 보유종목(QLD/SSO/SMH) 영향으로 환산.
-// 프론트에서 결정적으로 계산 — API 비용 없음. 지표명은 부분일치(키워드)로 매칭한다.
+// 프론트에서 결정적으로 계산 - API 비용 없음. 지표명은 부분일치(키워드)로 매칭한다.
 import type { Digest, SignalLight, IndicatorStatus } from "../api/client";
 
 export type Impact = "positive" | "neutral" | "caution" | "negative";
@@ -35,7 +35,7 @@ interface HoldingDef {
   lightWeight: number; // 시장 전반(신호등)이 이 종목에 주는 영향
 }
 
-// 종목별 민감 지표와 가중치 — 레버리지 ETF는 금리에, 반도체 ETF는 capex/메모리/SMH선에 민감.
+// 종목별 민감 지표와 가중치 - 레버리지 ETF는 금리에, 반도체 ETF는 capex/메모리/SMH선에 민감.
 const HOLDINGS: HoldingDef[] = [
   {
     ticker: "SMH", name: "반도체 ETF", leverage: "반도체(1×)", leveraged: false,
@@ -90,13 +90,13 @@ export interface HoldingImpact {
 function interpret(impact: Impact, leveraged: boolean): string {
   switch (impact) {
     case "positive":
-      return leveraged ? "레버리지가 상승을 증폭 — 비중 유지/확대 우호적" : "추세 우호적 — 비중 유지";
+      return leveraged ? "레버리지가 상승을 증폭 - 비중 유지/확대 우호적" : "추세 우호적 - 비중 유지";
     case "neutral":
-      return "뚜렷한 방향성 없음 — 관망";
+      return "뚜렷한 방향성 없음 - 관망";
     case "caution":
-      return leveraged ? "경고 신호 — 2× 레버리지는 하락도 증폭, 신규 진입 신중" : "경고 신호 — 관찰 강화";
+      return leveraged ? "경고 신호 - 2× 레버리지는 하락도 증폭, 신규 진입 신중" : "경고 신호 - 관찰 강화";
     case "negative":
-      return leveraged ? "디리스킹 구간 — 2× 레버리지 비중 축소 검토" : "추세 훼손 — 비중 점검";
+      return leveraged ? "디리스킹 구간 - 2× 레버리지 비중 축소 검토" : "추세 훼손 - 비중 점검";
   }
 }
 
@@ -105,7 +105,7 @@ function interpret(impact: Impact, leveraged: boolean): string {
 // 종목 영향으로 'SMH:QLD:SSO 비율'을 정한다. 전부 참고용(매매 지시 아님).
 export const BUDGET_KRW = 15_000_000;
 export const DCA_DAYS = 21;
-// 환율(고정, 가이드 표시용) — 가끔 갱신. yfinance KRW=X, 2026-06-17 기준 ≈ 1,513.
+// 환율(고정, 가이드 표시용) - 가끔 갱신. yfinance KRW=X, 2026-06-17 기준 ≈ 1,513.
 export const USDKRW = 1513;
 const round1k = (n: number) => Math.round(n / 1000) * 1000; // 천원 단위로
 const DAILY_BASE = round1k(BUDGET_KRW / DCA_DAYS); // ≈ 714,000
