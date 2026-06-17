@@ -1,0 +1,196 @@
+/* 보유종목 영향 분석 + 분할매수 가이드 (dash__main 최상단) */
+.holdings {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.holdings__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.holdings__head h2 {
+  font-size: clamp(15px, 1.6vw, 19px);
+  margin: 0;
+}
+.holdings__fx {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: clamp(11px, 0.95vw, 13px); /* 원래대로 작게 */
+}
+.holdings__fx-krw {
+  font-size: clamp(14px, 1.3vw, 17px); /* 원화 금액 크게 */
+  color: var(--white); /* 강조(흰색) */
+  font-weight: 700;
+}
+
+/* ── 카드 그리드: subgrid 로 각 카드의 같은 행(top/impact/interp/drivers/buy)을
+      카드끼리 같은 높이·같은 위치에 정렬. 카드 가로폭은 항상 동일(minmax 0). ── */
+.holdings__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(5, auto);
+  column-gap: 12px;
+  row-gap: 0;
+}
+.holding {
+  grid-row: span 5; /* 5행(top/impact/interp/drivers/buy)을 부모 트랙에 매핑 */
+  display: grid;
+  grid-template-rows: subgrid;
+  row-gap: 6px;
+  background: var(--panel-2);
+  border: 2px solid var(--border); /* 색은 인라인(impact) */
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.holding__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.holding__ticker {
+  font-weight: 700;
+  font-size: clamp(16px, 1.65vw, 20px);
+}
+.holding__lev {
+  font-size: clamp(11px, 0.95vw, 13px);
+  color: var(--text-dim);
+}
+.holding__impact {
+  font-size: clamp(15px, 1.55vw, 18px);
+  font-weight: 700;
+}
+/* 해석문 - '소제목 + 내용'으로 줄바꿈(길어져도 카드폭 고정, 다음 줄로) */
+.holding__interp {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: clamp(11px, 1.1vw, 12px);
+  line-height: 1.45;
+}
+.holding__interp-head {
+  font-weight: 600;
+  color: var(--text);
+}
+.holding__interp-body {
+  color: var(--text-dim);
+}
+.holding__drivers {
+  display: flex;
+  flex-direction: column; /* 세로 배치 */
+  gap: 5px;
+}
+.holding__driver {
+  font-size: clamp(12px, 1.15vw, 14px);
+  color: var(--text-dim);
+}
+.holdings__note {
+  font-size: clamp(12px, 1.15vw, 14px);
+  margin: 20px 0 0; /* 위 카드와 간격 늘림 */
+}
+
+/* 분할매수 가이드 */
+.buyguide__pace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 20px; /* 아래 카드와 간격 늘림 */
+  font-size: clamp(14px, 1.45vw, 17px);
+}
+.buyguide__total {
+  font-weight: 600;
+}
+.buyguide__basis {
+  font-size: clamp(12px, 1.15vw, 14px);
+}
+.holding__buy {
+  /* subgrid 마지막 행 → 항상 카드 최하단에 정렬 */
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: clamp(13px, 1.25vw, 16px);
+}
+.holding__buy-pct {
+  font-size: clamp(11px, 0.95vw, 13px); /* = holding__lev - 색 인라인 */
+}
+.holding__buy-usd {
+  font-size: clamp(16px, 1.65vw, 20px); /* = holding__ticker - 색 인라인 */
+}
+.holding__buy--wait {
+  color: var(--text-dim);
+}
+
+/* ── 태블릿(≤720): 1열 스택, subgrid 해제(나란히가 아니라 위아래라 정렬 불필요) ── */
+@media (max-width: 720px) {
+  .holdings__grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    row-gap: 12px;
+  }
+  .holding {
+    grid-row: auto;
+    grid-template-rows: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+/* ── 모바일(≤640): 종목당 컴팩트 가로 행(640 블록이 720보다 뒤 → 우선) ── */
+@media (max-width: 640px) {
+  .holdings__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .holding {
+    display: grid;
+    grid-template-columns: 5rem 1fr auto; /* 티커 고정폭 | 영향 | 매수 → impact 위치 통일 */
+    grid-template-rows: auto; /* subgrid 해제 */
+    grid-row: auto;
+    align-items: center;
+    gap: 2px 10px;
+    padding: 10px 12px;
+  }
+  .holding__top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    min-width: 0;
+  }
+  .holding__lev {
+    max-width: 5rem; /* 길이차로 첫 컬럼이 늘어나지 않게 - 넘치면 말줄임 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .holding__interp,
+  .holding__drivers {
+    display: none; /* 상세는 데스크탑에서만 */
+  }
+  .holding__buy {
+    padding-top: 0;
+    border-top: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* 우측 정렬 세로 스택 */
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+  .holding__buy-usd {
+    order: -1; /* 달러(금액)를 위로 */
+  }
+  .holding__buy-sep,
+  .holding__buy-label {
+    display: none; /* 구분점(·)·라벨 숨겨 세로 배치 */
+  }
+}
