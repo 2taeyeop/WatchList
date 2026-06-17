@@ -44,6 +44,15 @@ export interface NewsScan {
   sources: string[];
 }
 
+export type Sentiment = "positive" | "neutral" | "negative";
+
+export interface HoldingsNews {
+  ticker: string; // 내 ETF 구성종목
+  sentiment: Sentiment;
+  headline: string; // 최신 핵심 뉴스 한 줄
+  source: string;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`/api${path}`);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} (${path})`);
@@ -56,4 +65,5 @@ export const api = {
   digest: (date: string) => get<Digest>(`/digests/${date}`),
   scans: (date: string) => get<Scan[]>(`/scans/${date}`),
   newsScans: (date: string) => get<NewsScan[]>(`/news-scans/${date}`),
+  holdingsNews: (date: string) => get<HoldingsNews[]>(`/holdings-news/${date}`),
 };
