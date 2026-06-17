@@ -100,7 +100,9 @@ npm run dev            # localhost:5173 — /api 는 vite proxy 로 :8000 백엔
 - `deploy/nginx.conf` — 서브도메인 `watch.<도메인>`: `/` 정적 프론트, `/api` → `api:8000` 프록시.
 - **스케줄러**: 호스트 cron 또는 systemd timer 가 `docker compose run --rm api python digest.py` / `scanner.py` 실행 → 같은 `./data/watchlist.db`에 기록. (컨테이너 내부 cron 대신 호스트 timer 권장.)
   - `deploy/systemd/digest.service`+`digest.timer`(13:00 UTC), `scanner.service`+`scanner.timer`(20:05 UTC) 예시 작성.
-- env: `ANTHROPIC_API_KEY`,`TELEGRAM_BOT_TOKEN`,`TELEGRAM_CHAT_ID` 는 EC2의 `.env`(compose `env_file`)로 주입 — **커밋 금지**.
+- env: EC2의 `.env`(커밋 금지)로 주입. **(이후 전환됨)** digest 는 Anthropic API 키 대신
+  Claude Code 구독 인증(`CLAUDE_CODE_OAUTH_TOKEN`)을 호스트에서 사용 — `ANTHROPIC_API_KEY` 미사용.
+  컨테이너 scanner 는 `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` 만.
 
 **④ 7-7 통합 테스트** — compose 로컬 기동 → 프론트에서 seed 데이터 보이는지.
 

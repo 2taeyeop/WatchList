@@ -12,11 +12,11 @@
   - 설치: `pip install -r requirements.txt` · `cd frontend && npm install`
   - 개발 서버: `uvicorn backend.api:app --reload` · `cd frontend && npm run dev`
   - 빌드: `cd frontend && npm run build`
-  - 파이프라인: `python digest.py` · `python scanner.py`
+  - 파이프라인: `python -m backend.jobs.digest` · `… scanner` · `… news_scan`
 
 ### 직접 실행하지 말 것
 
-- **`digest.py`는 유료 Anthropic 호출** — 키 없이/임의로 돌리지 말 것. 실제 발송 테스트는 사용자가 본인 키로 실행.
+- **`digest.py`·`news_scan.py`는 Claude 구독(Max) 호출** — 임의로 돌리면 한도 차감·텔레그램 발송. 테스트는 사용자가 실행.
 - **비밀값은 `.env`/GitHub Secrets로만** — 코드·커밋·로그에 키를 넣지 말 것.
 - 배포/빌드 명령은 EC2·GitHub Actions에서 돌아감 — 로컬에서 함부로 실행 금지.
 
@@ -80,8 +80,8 @@
 
 | 위치 | 용도 |
 | ---- | ---- |
-| 루트 `digest.py`·`scanner.py`·`notify.py` | 파이프라인(배치 잡) + 발송 헬퍼 |
-| `backend/` | SQLite 저장소(`db.py`) + FastAPI(`api.py`) |
+| `backend/jobs/` | 파이프라인 배치 잡(`digest.py`·`scanner.py`·`news_scan.py`) |
+| `backend/` | SQLite 저장소(`db.py`) + FastAPI(`api.py`) + 발송 헬퍼(`notify.py`) |
 | `frontend/src/` | Vite+React 대시보드 (기능 단위 co-locate) |
 | `frontend/src/api/` | 백엔드 통신 클라이언트 |
 | `deploy/` | Dockerfile·docker-compose·nginx·systemd |
@@ -98,7 +98,7 @@
 | 날짜/통화 포매터 | `frontend/src/shared/` |
 | API 클라이언트(fetch 래퍼·타입) | `frontend/src/api/` |
 | DB 스키마·저장/조회 헬퍼 | `backend/db.py` |
-| 텔레그램/디스코드 발송 | `notify.py` |
+| 텔레그램/디스코드 발송 | `backend/notify.py` |
 
 ## 외부 계약은 추측하지 말고 검증
 
