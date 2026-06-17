@@ -1,0 +1,21 @@
+/* 색 전역 관리 - 모든 컴포넌트는 이 토큰만 참조(하드코딩 금지) */
+:root {
+  /* 신호 색 - shared/signal.ts 의 cssVar 와 짝 */
+  --ok: #22c55e;
+  --caution: #eab308;
+  --alert: #ef4444;
+  --muted: #6b7280;
+
+  /* 테마 - 블랙 그레이톤 */
+  --bg: #0a0a0a;
+  --panel: #161616;
+  --panel-2: #1f1f1f;
+  --border: #2a2a2a;
+  --text: #e6e6e6;
+  --text-dim: #8a8a8a;
+  --accent: #d4d4d4;
+
+  /* 보조 색 */
+  --white: #ffffff; /* 강조 수치(원화 금액 등) */
+  --overlay: rgba(0, 0, 0, 0.55); /* 모바일 드로어 배경 */
+}

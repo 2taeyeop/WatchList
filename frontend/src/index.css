@@ -1,19 +1,5 @@
+/* 색 토큰은 color.css 에서 전역 관리(main.tsx 가 먼저 import) */
 :root {
-  /* 신호 색 — shared/signal.ts 의 cssVar 와 짝 */
-  --ok: #22c55e;
-  --caution: #eab308;
-  --alert: #ef4444;
-  --muted: #94a3b8;
-
-  /* 테마 */
-  --bg: #0f172a;
-  --panel: #1e293b;
-  --panel-2: #273449;
-  --border: #334155;
-  --text: #e2e8f0;
-  --text-dim: #94a3b8;
-  --accent: #38bdf8;
-
   color-scheme: dark;
   font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
 }
@@ -22,11 +8,17 @@
   box-sizing: border-box;
 }
 
+/* 스크롤바 자리를 항상 예약 → prose 펼칠 때 폭 변화로 글자가 밀리는 현상 방지 */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
   line-height: 1.55;
+  font-size: clamp(15px, 1.35vw, 18px); /* 기본 폰트도 fluid */
 }
 
 a {
