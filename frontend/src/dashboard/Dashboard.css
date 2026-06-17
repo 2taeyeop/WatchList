@@ -36,6 +36,10 @@
   color: var(--text-dim);
   padding: 40px 0;
 }
+/* 탭 내용 래퍼(스와이프 영역) - 그리드 칸 넘침 방지 체인 유지 */
+.dash__content {
+  min-width: 0;
+}
 
 /* 공용 카드(다이제스트/스캔/뉴스가 컨테이너로 사용) */
 .card {
@@ -130,11 +134,49 @@
 
 /* ── 가로 탭 네비(밑줄 스타일, 항상 표시) ── */
 .homenav {
+  /* ▼ 밑줄(활성 탭 border-bottom) 길이 조절 ▼
+     100% = 칸 가득 · 70% 등 % = 짧게 · fit-content = 글자+아이콘 폭 · 40px 등 고정값도 가능 */
+  --homenav-ul-width: 100%;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)); /* 항목 가로폭 동일 */
+  /* 1축(보유·다이제스트) | 구분선 | 2축(반등포착·기술·뉴스). 탭 5개는 동일폭(1fr) */
+  grid-template-columns:
+    minmax(0, 1fr) minmax(0, 1fr) 17px minmax(0, 1fr)
+    minmax(0, 1fr) minmax(0, 1fr);
   gap: 4px;
+  position: sticky; /* 스크롤해도 항상 보이는 헤더 */
+  top: 0;
+  z-index: 10;
+  background: var(--bg); /* 스크롤되는 콘텐츠가 비치지 않게 */
   border-bottom: 1px solid var(--border); /* nav 전체 밑줄 */
   margin-bottom: 16px;
+}
+/* 1축/2축 구분선 - 세로선이 밑줄(border-bottom)까지 내려가고, 그 폭만큼 밑줄을 끊는다 */
+.homenav__divider {
+  position: relative;
+  justify-self: stretch; /* 17px 구분 컬럼 가득 */
+  align-self: stretch;
+  margin-top: 14px; /* 위는 살짝 띄움 */
+}
+.homenav__divider::before {
+  /* nav 밑줄을 구분선 폭(+양옆 gap)만큼 배경색으로 끊음 */
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: -1px;
+  height: 1px;
+  background: var(--bg);
+}
+.homenav__divider::after {
+  /* 세로 구분선 - 위에서 밑줄(baseline)까지 */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: -1px;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--border);
 }
 .homenav__item {
   display: flex;
@@ -155,13 +197,17 @@
   font-weight: 700;
 }
 .homenav__inner {
-  display: inline-flex;
+  display: flex;
+  width: var(
+    --homenav-ul-width,
+    100%
+  ); /* ← 밑줄 길이(아래 .homenav 의 변수로 조절) */
+  justify-content: center; /* 아이콘+글자는 가운데 */
   align-items: center;
   gap: 6px;
-  max-width: 100%;
   margin-bottom: -2px; /* nav 베이스라인과 완전히 겹치게 */
   padding-bottom: 8px;
-  border-bottom: 2px solid transparent; /* 색 인라인(tabColor) - 아이콘+글자 폭 */
+  border-bottom: 2px solid transparent; /* 색 인라인(tabColor) */
 }
 .homenav__icon {
   display: inline-flex;

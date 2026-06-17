@@ -56,10 +56,8 @@
   font-weight: 700;
 }
 .indic__nums {
-  margin-left: auto; /* 수치는 우측 정렬 → 세로로 가지런히 */
-  color: var(--text-dim);
+  color: var(--text-dim); /* 이름 옆에서 좌측으로 자연스럽게 흐름(줄바꿈 허용) */
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 .indic__comment {
   margin: 4px 0 0;
