@@ -16,17 +16,104 @@
   font-size: clamp(15px, 1.6vw, 19px);
   margin: 0;
 }
-.holdings__fx {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  font-size: clamp(11px, 0.95vw, 13px); /* 원래대로 작게 */
+
+/* 구성종목 최신 뉴스(페이스 ③ 입력) */
+.holdings__news {
+  margin-top: 20px;
+  margin-bottom: 18px;
 }
-.holdings__fx-krw {
-  font-size: clamp(14px, 1.3vw, 17px); /* 원화 금액 크게 */
-  color: var(--white); /* 강조(흰색) */
+.holdings__news-label {
+  cursor: pointer; /* 토글(summary) - 기본 펼침 삼각형 유지 */
+  margin-bottom: 6px;
+  font-size: clamp(12px, 1.15vw, 14px);
   font-weight: 700;
+  color: var(--text-dim);
+}
+.holdings__news-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.holdings__news-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: clamp(12px, 1.25vw, 15px);
+}
+.holdings__news-dot {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.holdings__news-tkr {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+.holdings__news-head {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.holdings__news-src {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: clamp(11px, 1vw, 13px);
+}
+
+/* 카드 클릭 → 관련 뉴스 모달 (holdings__news-list 재사용) */
+.hmodal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--overlay);
+}
+.hmodal {
+  width: min(460px, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.hmodal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.hmodal__head h3 {
+  margin: 0;
+  font-size: clamp(15px, 1.6vw, 18px);
+}
+.hmodal__close {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.hmodal__close:hover {
+  color: var(--text);
+}
+/* 모달 안에서는 헤드라인 전체 표시(줄바꿈) */
+.hmodal .holdings__news-head {
+  white-space: normal;
+  overflow: visible;
 }
 
 /* ── 카드 그리드: subgrid 로 각 카드의 같은 행(top/impact/interp/drivers/buy)을
@@ -47,6 +134,11 @@
   border: 2px solid var(--border); /* 색은 인라인(impact) */
   border-radius: 10px;
   padding: 12px 14px;
+  cursor: pointer; /* 클릭 → 관련 뉴스 모달 */
+  transition: background 0.12s;
+}
+.holding:hover {
+  background: color-mix(in srgb, var(--panel-2) 88%, var(--text) 12%);
 }
 .holding__top {
   display: flex;
@@ -66,11 +158,13 @@
   font-size: clamp(15px, 1.55vw, 18px);
   font-weight: 700;
 }
-/* 해석문 - '소제목 + 내용'으로 줄바꿈(길어져도 카드폭 고정, 다음 줄로) */
+/* 해석문 - 소제목(좌) + 내용(우)을 한 가로줄 양 끝에 */
 .holding__interp {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
   font-size: clamp(11px, 1.1vw, 12px);
   line-height: 1.45;
 }
@@ -95,35 +189,70 @@
   margin: 20px 0 0; /* 위 카드와 간격 늘림 */
 }
 
-/* 분할매수 가이드 */
+/* 분할매수 가이드 - 강도 / 계산 근거 / 기준 3줄 */
 .buyguide__pace {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
+  gap: 9px; /* 웹: 요소 세로 간격 넓게(모바일 ≤720 에서 축소) */
+  width: 50%; /* 웹: 하단 카드(3개) 전체폭의 절반, 가운데 정렬 */
+  margin: 0 auto 20px; /* holdings 중앙 + 아래 카드와 간격 */
   background: var(--panel-2);
   border-radius: 8px;
-  padding: 9px 12px;
-  margin-bottom: 20px; /* 아래 카드와 간격 늘림 */
-  font-size: clamp(14px, 1.45vw, 17px);
+  padding: 12px 14px;
+  font-size: clamp(15px, 1.6vw, 19px);
 }
-.buyguide__total {
+/* 투입 강도 한 표(헤더 + 요인 + 합계: 라벨 좌 / 값 우) - 박스 폭을 채움 */
+.buyguide__calc {
+  display: flex;
+  flex-direction: column;
+  gap: 9px; /* 웹: 행(기본/보정/합계) 간격 넓게(모바일 ≤720 에서 축소) */
+  font-size: clamp(13px, 1.35vw, 16px);
+}
+.buyguide__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.buyguide__row--head {
+  font-size: clamp(15px, 1.55vw, 19px);
+  font-weight: 600; /* 합계와 동일하게 굵게 */
+  margin-bottom: 2px;
+}
+.buyguide__row--total {
+  margin-top: 4px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border);
+  font-size: clamp(15px, 1.55vw, 19px); /* = buyguide__row--head(투입 강도) */
+  font-weight: 600;
+}
+.buyguide__cap {
+  color: var(--alert);
   font-weight: 600;
 }
 .buyguide__basis {
-  font-size: clamp(12px, 1.15vw, 14px);
+  text-align: right; /* 부모(fit-content) 폭에 stretch → 합계 $ 끝과 정렬 */
+  font-size: clamp(13px, 1.25vw, 15px);
 }
 .holding__buy {
   /* subgrid 마지막 행 → 항상 카드 최하단에 정렬 */
   padding-top: 8px;
   border-top: 1px dashed var(--border);
   font-size: clamp(13px, 1.25vw, 16px);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between; /* usd(좌, ticker 아래) / pct(우, lev 아래) */
+}
+.holding__buy-label,
+.holding__buy-sep {
+  display: none; /* 정렬 위해 라벨·구분점 숨김 */
 }
 .holding__buy-pct {
-  font-size: clamp(11px, 0.95vw, 13px); /* = holding__lev - 색 인라인 */
+  font-size: clamp(11px, 0.95vw, 13px); /* = holding__lev (색 인라인) */
 }
 .holding__buy-usd {
-  font-size: clamp(16px, 1.65vw, 20px); /* = holding__ticker - 색 인라인 */
+  order: -1; /* usd 를 왼쪽으로(ticker 아래) */
+  font-size: clamp(16px, 1.65vw, 20px); /* = holding__ticker (색 인라인) */
 }
 .holding__buy--wait {
   color: var(--text-dim);
@@ -131,6 +260,13 @@
 
 /* ── 태블릿(≤720): 1열 스택, subgrid 해제(나란히가 아니라 위아래라 정렬 불필요) ── */
 @media (max-width: 720px) {
+  .buyguide__pace {
+    width: 100%; /* 카드가 1열(전체폭)이 되면 카드와 같은 가로길이 */
+    gap: 5px; /* 모바일은 세로 간격 다시 축소 */
+  }
+  .buyguide__calc {
+    gap: 3px;
+  }
   .holdings__grid {
     grid-template-columns: 1fr;
     grid-template-rows: none;
