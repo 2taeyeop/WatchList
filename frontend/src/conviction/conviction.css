@@ -1,0 +1,168 @@
+/* 반등 포착 - 등급(A/B/C) 카드 + 판단 근거 패널 (셸의 .card 안) */
+
+/* 상단 요약: 등급 카운트 + 시장 신호등 */
+.conv__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin-bottom: 12px;
+  font-size: clamp(13px, 1.25vw, 15px);
+}
+.conv__legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+.conv__leg {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: clamp(12px, 1.15vw, 14px);
+  white-space: nowrap;
+}
+.conv__leg b {
+  font-weight: 800;
+}
+.conv__market {
+  font-weight: 600;
+}
+.conv__warn {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--alert) 16%, transparent);
+  border: 1px solid var(--alert);
+  border-radius: 8px;
+  font-size: clamp(13px, 1.25vw, 15px);
+  line-height: 1.5;
+}
+
+/* 후보 카드 목록 */
+.conv {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px; /* = .card 세로 패딩(18px)과 동일 */
+}
+.conv__item {
+  background: var(--panel-2);
+  border: 2px solid var(--border); /* 색 인라인(grade) */
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.conv__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.conv__grade {
+  align-self: center;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--bg); /* 밝은 등급색 위 어두운 글자 */
+  font-weight: 800;
+  font-size: clamp(13px, 1.25vw, 15px);
+}
+.conv__ticker {
+  font-weight: 700;
+  font-size: clamp(15px, 1.55vw, 18px);
+}
+.conv__name {
+  font-size: clamp(12px, 1.1vw, 14px);
+  color: var(--text-dim);
+}
+.conv__headline {
+  margin-left: auto;
+  font-weight: 600;
+  font-size: clamp(12px, 1.15vw, 14px);
+  white-space: nowrap;
+}
+.conv__rationale {
+  margin: 8px 0 0;
+  font-size: clamp(13px, 1.25vw, 15px);
+  line-height: 1.5;
+}
+
+/* 근거 블록(촉매/기술) */
+.conv__block {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.conv__block-label {
+  display: inline-block;
+  margin-bottom: 4px;
+  font-size: clamp(11px, 1vw, 13px);
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.conv__catalyst {
+  margin: 0;
+  font-size: clamp(13px, 1.35vw, 16px);
+  line-height: 1.5;
+}
+.conv__view {
+  margin: 4px 0 0;
+  font-size: clamp(12px, 1.2vw, 15px);
+}
+.conv__meta {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: clamp(12px, 1.1vw, 14px);
+  color: var(--text-dim);
+}
+.conv__meta a {
+  color: var(--accent);
+}
+.conv__metarow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.conv__price {
+  color: var(--text-dim);
+}
+.conv__chg {
+  font-weight: 600;
+}
+.conv__reasons {
+  margin: 0;
+  padding-left: 18px;
+  font-size: clamp(13px, 1.25vw, 16px);
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.conv__reasons li {
+  margin-bottom: 4px;
+}
+.conv__reasons li:last-child {
+  margin-bottom: 0;
+}
+.conv__reason-name {
+  display: block;
+  color: var(--text);
+}
+.conv__reason-desc {
+  display: block;
+}
+.conv__inval {
+  margin: 10px 0 0;
+  font-size: clamp(12px, 1.15vw, 14px);
+  color: var(--text-dim);
+  font-style: italic;
+}

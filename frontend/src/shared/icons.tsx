@@ -1,9 +1,20 @@
 // nav 탭 · 섹션 헤더 공용 SVG 아이콘(currentColor 상속). 한 곳에서만 정의해 재사용.
 import type { ReactElement } from "react";
 
-export type IconKey = "holdings" | "digest" | "scan" | "news";
+export type IconKey = "holdings" | "digest" | "scan" | "news" | "conviction";
 
 export const ICONS: Record<IconKey, ReactElement> = {
+  conviction: (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="3" />
+      <line x1="12" y1="2" x2="12" y2="5" />
+      <line x1="12" y1="19" x2="12" y2="22" />
+      <line x1="2" y1="12" x2="5" y2="12" />
+      <line x1="19" y1="12" x2="22" y2="12" />
+    </svg>
+  ),
   holdings: (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
