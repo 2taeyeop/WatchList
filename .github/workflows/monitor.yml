@@ -1,0 +1,40 @@
+name: market-monitor
+
+# 주의: GitHub cron은 UTC 기준입니다. 아래 시각은 미국 '서머타임'(EDT, UTC-4) 기준.
+#       미국 '겨울'(EST, UTC-5)이 되면 각 시각에 +1시간 하세요 (14:00 / 21:05).
+#       (또는 정밀한 시간이 필요하면 AWS EventBridge로 옮기세요 — README 참고.)
+on:
+  schedule:
+    - cron: "0 13 * * 1-5"   # digest  : 13:00 UTC = 09:00 ET (개장 30분 전)
+    - cron: "5 20 * * 1-5"   # scanner : 20:05 UTC = 16:05 ET (장 마감 후)
+  workflow_dispatch: {}       # Actions 탭에서 수동 실행 가능
+
+jobs:
+  digest:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 13 * * 1-5'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python digest.py
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+  scanner:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '5 20 * * 1-5'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python scanner.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
