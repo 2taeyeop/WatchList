@@ -16,3 +16,11 @@ export function fmtPrice(n: number): string {
 export function fmtPct(n: number): string {
   return `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
 }
+
+export function fmtKRW(n: number): string {
+  return n.toLocaleString("ko-KR") + "원";
+}
+
+export function fmtUSD(n: number): string {
+  return "$" + Math.round(n).toLocaleString("en-US");
+}

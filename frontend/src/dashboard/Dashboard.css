@@ -16,6 +16,19 @@
 }
 
 .datelist {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.datelist__week {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 0 10px 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.datelist__items {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -203,4 +216,174 @@
 .disclaimer {
   font-size: 12px;
   margin: 14px 0 0;
+}
+
+/* 보유종목 영향 분석 (최상단) */
+.holdings {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.holdings__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.holdings__head h2 {
+  font-size: 16px;
+  margin: 0;
+}
+.holdings__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.holding {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--muted);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.holding__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.holding__ticker {
+  font-weight: 700;
+  font-size: 17px;
+}
+.holding__lev {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.holding__impact {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 6px 0 4px;
+}
+.holding__interp {
+  font-size: 13px;
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+.holding__drivers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.holding__driver {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.holdings__note {
+  font-size: 12px;
+  margin: 12px 0 0;
+}
+
+/* 분할매수 가이드 */
+.buyguide__pace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+.buyguide__total {
+  font-weight: 600;
+}
+.buyguide__basis {
+  font-size: 12px;
+}
+.holding__buy {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: 13px;
+}
+.holding__buy b {
+  font-size: 15px;
+  color: var(--accent);
+}
+.holding__buy--wait {
+  color: var(--text-dim);
+}
+
+/* 뉴스 반등 후보 */
+.news {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.news__item {
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.news__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.news__ticker {
+  font-weight: 700;
+  font-size: 15px;
+}
+.news__chg {
+  color: var(--alert);
+  font-weight: 600;
+}
+.news__conf {
+  margin-left: auto;
+  font-size: 12px;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 1px 9px;
+}
+.news__catalyst {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.news__view {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+/* 반등 사유 설명 */
+.scans__why {
+  margin-top: 8px;
+}
+.scans__why summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 12px;
+}
+.scans__whylist {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.scans__whylist b {
+  color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .holdings__grid {
+    grid-template-columns: 1fr;
+  }
 }

@@ -35,6 +35,15 @@ export interface Scan {
   reasons: string[];
 }
 
+export interface NewsScan {
+  ticker: string;
+  change_pct: number; // 전일 하락률
+  catalyst: string; // 호재 요약
+  view: string; // 반등 관점
+  confidence: string; // high | medium | low
+  sources: string[];
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`/api${path}`);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} (${path})`);
@@ -46,4 +55,5 @@ export const api = {
   latestDigest: () => get<Digest | null>("/digests/latest"),
   digest: (date: string) => get<Digest>(`/digests/${date}`),
   scans: (date: string) => get<Scan[]>(`/scans/${date}`),
+  newsScans: (date: string) => get<NewsScan[]>(`/news-scans/${date}`),
 };

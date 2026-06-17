@@ -1,6 +1,7 @@
-// 반등 스캔 후보 — watchlist 밖 종목의 기술적 반등 신호(관찰 후보).
+// 반등 스캔 후보 — watchlist 밖 종목의 기술적 반등 신호 + 왜 반등 신호인지 설명.
 import type { Scan } from "../api/client";
 import { fmtPrice, fmtPct } from "../shared/format";
+import { explainReason } from "../shared/scanReasons";
 
 interface Props {
   scans: Scan[];
@@ -32,9 +33,19 @@ export default function ScanList({ scans }: Props) {
               </div>
               <div className="scans__reasons">
                 {s.reasons.map((r, i) => (
-                  <span key={i} className="tag">{r}</span>
+                  <span key={i} className="tag" title={explainReason(r)}>{r}</span>
                 ))}
               </div>
+              <details className="scans__why">
+                <summary>왜 반등 신호인가?</summary>
+                <ul className="scans__whylist">
+                  {s.reasons.map((r, i) => (
+                    <li key={i}>
+                      <b>{r}</b> — {explainReason(r)}
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </li>
           ))}
         </ul>

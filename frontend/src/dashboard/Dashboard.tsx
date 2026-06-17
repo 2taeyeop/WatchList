@@ -1,10 +1,12 @@
 // 대시보드 메인 — 좌측 날짜 목록 + 우측 상세(다이제스트 신호/지표/본문 + 스캔 후보).
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import type { DateEntry, Digest, Scan } from "../api/client";
+import type { DateEntry, Digest, Scan, NewsScan } from "../api/client";
 import DateList from "./DateList";
+import HoldingsImpact from "./HoldingsImpact";
 import DigestView from "./DigestView";
 import ScanList from "./ScanList";
+import NewsRebound from "./NewsRebound";
 import "./Dashboard.css";
 
 export default function Dashboard() {
@@ -12,6 +14,7 @@ export default function Dashboard() {
   const [selected, setSelected] = useState<string | null>(null);
   const [digest, setDigest] = useState<Digest | null>(null);
   const [scans, setScans] = useState<Scan[]>([]);
+  const [newsScans, setNewsScans] = useState<NewsScan[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,10 +37,12 @@ export default function Dashboard() {
     Promise.all([
       api.digest(selected).catch(() => null), // 그날 다이제스트가 없을 수도(스캔만)
       api.scans(selected),
+      api.newsScans(selected),
     ])
-      .then(([dg, sc]) => {
+      .then(([dg, sc, ns]) => {
         setDigest(dg);
         setScans(sc);
+        setNewsScans(ns);
       })
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
@@ -61,8 +66,10 @@ export default function Dashboard() {
         {loading && <div className="dash__empty">불러오는 중…</div>}
         {selected && !loading && (
           <>
+            <HoldingsImpact digest={digest} />
             <DigestView date={selected} digest={digest} />
             <ScanList scans={scans} />
+            <NewsRebound items={newsScans} />
           </>
         )}
       </main>
