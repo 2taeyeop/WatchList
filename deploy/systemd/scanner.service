@@ -6,4 +6,4 @@ Requires=docker.service
 [Service]
 Type=oneshot
 WorkingDirectory=/opt/watchlist
-ExecStart=/usr/bin/docker compose -f deploy/docker-compose.yml run --rm api python scanner.py
+ExecStart=/usr/bin/docker compose -f deploy/docker-compose.yml run --rm api python -m backend.jobs.scanner

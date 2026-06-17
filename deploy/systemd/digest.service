@@ -1,10 +1,16 @@
 [Unit]
-Description=WatchList pre-market digest (Anthropic + Telegram + DB 저장)
-After=docker.service network-online.target
-Requires=docker.service
+Description=WatchList pre-market digest (Claude Code 구독 + Telegram + DB 저장)
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
-# 레포를 /opt/watchlist 에 둔 경우. 본인 경로로 수정.
+# digest 는 Claude Code(Node 기반)를 구독 인증으로 호출하므로 '호스트에서' 실행한다.
+# (스캐너/ API/web 은 컨테이너. digest 만 호스트 — Node+claude 가 필요해서.)
+# 사전 준비(README 섹션 7): 호스트에 python venv + 의존성, Node + @anthropic-ai/claude-code,
+#   `claude setup-token` 으로 발급한 토큰을 .env 의 CLAUDE_CODE_OAUTH_TOKEN 에 넣기.
 WorkingDirectory=/opt/watchlist
-ExecStart=/usr/bin/docker compose -f deploy/docker-compose.yml run --rm api python digest.py
+EnvironmentFile=/opt/watchlist/.env       # CLAUDE_CODE_OAUTH_TOKEN / TELEGRAM_* (ANTHROPIC_API_KEY 없을 것)
+# claude 가 PATH 에 없으면 주석 해제해 절대경로 지정:
+# Environment=CLAUDE_BIN=/usr/local/bin/claude
+ExecStart=/opt/watchlist/.venv/bin/python -m backend.jobs.digest

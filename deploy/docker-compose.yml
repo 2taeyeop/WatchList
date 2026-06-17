@@ -6,7 +6,7 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.api
     image: watchlist-api
-    env_file: [../.env] # ANTHROPIC_API_KEY / TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID
+    env_file: [../.env] # TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID (컨테이너의 scanner 발송용)
     environment:
       - WATCHLIST_DB=/app/data/watchlist.db
     volumes:
