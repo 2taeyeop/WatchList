@@ -134,7 +134,16 @@ export default function Dashboard() {
         <div className="dash__overlay" onClick={() => setDrawer(false)} />
       )}
       <aside className={`dash__side${drawer ? " is-open" : ""}`}>
-        <h1 className="dash__brand">WatchList</h1>
+        <h1 className="dash__brand">
+          <span>WatchList</span>
+          <button
+            className="dash__close"
+            onClick={() => setDrawer(false)}
+            aria-label="사이드바 닫기"
+          >
+            ✕
+          </button>
+        </h1>
         <DateList dates={dates} selected={selected} onSelect={pickDate} />
       </aside>
 
@@ -157,7 +166,12 @@ export default function Dashboard() {
             onClick={() => setDrawer(true)}
             aria-label="날짜 목록"
           >
-            ☰
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
           {selected && (
             <div className="stepper">

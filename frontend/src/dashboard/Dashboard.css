@@ -13,8 +13,24 @@
   padding: 20px 14px;
 }
 .dash__brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: clamp(17px, 1.7vw, 21px);
   margin: 0 0 16px 8px;
+}
+.dash__close {
+  display: none; /* 데스크탑은 사이드바 고정 → 닫기 버튼 숨김(모바일 드로어만) */
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 6px;
+}
+.dash__close:hover {
+  color: var(--text);
 }
 
 /* 우측 본문 */
@@ -83,7 +99,6 @@
   gap: 10px;
   margin-bottom: 18px;
 }
-.topbar__menu,
 .topbar__back {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -93,8 +108,14 @@
 }
 .topbar__menu {
   display: none; /* 데스크탑 숨김 - 모바일에서만 */
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-dim); /* svg 아이콘만(배경·테두리 없음) */
 }
-.topbar__menu:hover,
+.topbar__menu:hover {
+  color: var(--text);
+}
 .topbar__back:hover {
   background: var(--panel-2);
 }
@@ -103,20 +124,19 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 3px 6px;
 }
 .stepper button {
   background: transparent;
   border: none;
   color: var(--text);
-  font-size: clamp(20px, 2.1vw, 24px);
+  font-size: clamp(26px, 2.8vw, 32px); /* 날짜 텍스트(stepper__date)보다 살짝 크게 */
   line-height: 1;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
+  /* ‹ › 글리프 수직 보정: margin-bottom↑ = 글리프 위로(텍스트 중앙 정렬).
+     반대로 내리려면 이 줄을 margin-top 으로 바꾸면 됨 */
+  margin-bottom: 4px;
 }
 .stepper button:disabled {
   color: var(--text-dim);
@@ -256,6 +276,9 @@
   }
   .topbar__menu {
     display: inline-flex;
+  }
+  .dash__close {
+    display: inline-flex; /* 모바일 드로어에서만 닫기 버튼 표시 */
   }
   .dash__main {
     padding: 16px;
