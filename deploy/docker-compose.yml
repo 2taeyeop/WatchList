@@ -1,0 +1,24 @@
+# EC2 단일 호스트 배포. 레포 루트에서: docker compose -f deploy/docker-compose.yml up -d --build
+# 키는 레포 루트의 .env(env_file, 커밋 금지)로 주입.
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    image: watchlist-api
+    env_file: [../.env] # ANTHROPIC_API_KEY / TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID
+    environment:
+      - WATCHLIST_DB=/app/data/watchlist.db
+    volumes:
+      - ../data:/app/data # SQLite 파일을 호스트와 공유(스케줄러 배치도 같은 파일 사용)
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    image: watchlist-web
+    ports:
+      - "8080:80" # 호스트 nginx 가 watch.<도메인> → 127.0.0.1:8080 으로 프록시
+    depends_on: [api]
+    restart: unless-stopped

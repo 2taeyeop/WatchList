@@ -1,0 +1,11 @@
+[Unit]
+Description=WatchList digest 평일 13:00 UTC 실행 (= 09:00 ET, 개장 30분 전)
+
+[Timer]
+# EC2 기본 타임존은 UTC (monitor.yml cron 과 동일 기준).
+# ⚠️ 미국 겨울(EST)엔 ET 가 UTC-5 → 14:00 UTC 로 +1시간 옮길 것.
+OnCalendar=Mon-Fri *-*-* 13:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,17 @@
+# FastAPI(api) + 파이프라인(digest/scanner) 공용 이미지.
+# - 평소: uvicorn 으로 /api 서빙(아래 CMD).
+# - 스케줄: `docker compose run --rm api python digest.py` 처럼 command 를 덮어써 배치 실행.
+FROM python:3.12-slim
+
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 PYTHONUTF8=1
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 백엔드 + 파이프라인 스크립트(같은 의존성 공유)
+COPY backend/ ./backend/
+COPY notify.py digest.py scanner.py ./
+
+EXPOSE 8000
+CMD ["uvicorn", "backend.api:app", "--host", "0.0.0.0", "--port", "8000"]

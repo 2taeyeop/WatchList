@@ -1,0 +1,10 @@
+[Unit]
+Description=WatchList pre-market digest (Anthropic + Telegram + DB 저장)
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# 레포를 /opt/watchlist 에 둔 경우. 본인 경로로 수정.
+WorkingDirectory=/opt/watchlist
+ExecStart=/usr/bin/docker compose -f deploy/docker-compose.yml run --rm api python digest.py
