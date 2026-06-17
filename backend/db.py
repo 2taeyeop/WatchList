@@ -71,6 +71,19 @@ def init_db() -> None:
                 UNIQUE(date, ticker)
             );
             CREATE INDEX IF NOT EXISTS idx_scans_date ON scans(date);
+            CREATE TABLE IF NOT EXISTS news_scans (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                date       TEXT NOT NULL,        -- YYYY-MM-DD (ET 거래일)
+                created_at TEXT NOT NULL,
+                ticker     TEXT NOT NULL,
+                change_pct REAL,                 -- 전일 하락률
+                catalyst   TEXT,                 -- 호재 요약
+                view       TEXT,                 -- 반등 관점
+                confidence TEXT,                 -- high | medium | low
+                sources    TEXT,                 -- JSON 배열(출처 URL)
+                UNIQUE(date, ticker)
+            );
+            CREATE INDEX IF NOT EXISTS idx_news_scans_date ON news_scans(date);
             """
         )
 
@@ -160,4 +173,34 @@ def get_scans(date: str) -> list[dict]:
     return [{
         "ticker": r["ticker"], "price": r["price"], "change_pct": r["change_pct"],
         "reasons": json.loads(r["reasons"] or "[]"),
+    } for r in rows]
+
+
+# ---------- 뉴스 반등 후보 ----------
+def save_news_scans(items: list[dict], date: str | None = None) -> str:
+    """items: [{ticker, change_pct, catalyst, view, confidence, sources}]."""
+    date = date or trading_day()
+    now = _now_utc()
+    with connect() as conn:
+        conn.execute("DELETE FROM news_scans WHERE date=?", (date,))
+        conn.executemany(
+            """INSERT OR REPLACE INTO news_scans
+                 (date, created_at, ticker, change_pct, catalyst, view, confidence, sources)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            [(date, now, it["ticker"], float(it.get("change_pct") or 0),
+              it.get("catalyst", ""), it.get("view", ""), it.get("confidence", ""),
+              json.dumps(it.get("sources", []), ensure_ascii=False))
+             for it in items],
+        )
+    return date
+
+
+def get_news_scans(date: str) -> list[dict]:
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM news_scans WHERE date=? ORDER BY ticker", (date,)).fetchall()
+    return [{
+        "ticker": r["ticker"], "change_pct": r["change_pct"],
+        "catalyst": r["catalyst"], "view": r["view"], "confidence": r["confidence"],
+        "sources": json.loads(r["sources"] or "[]"),
     } for r in rows]

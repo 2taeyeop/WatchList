@@ -1,32 +1,19 @@
 name: market-monitor
 
-# 주의: GitHub cron은 UTC 기준입니다. 아래 시각은 미국 '서머타임'(EDT, UTC-4) 기준.
-#       미국 '겨울'(EST, UTC-5)이 되면 각 시각에 +1시간 하세요 (14:00 / 21:05).
-#       (또는 정밀한 시간이 필요하면 AWS EventBridge로 옮기세요 — README 참고.)
+# scanner(②)만 GitHub Actions 로 돌립니다 — yfinance + 텔레그램만 쓰므로 OK.
+#
+# digest(①)는 Claude Code 를 '구독 인증'으로 호출하므로 GitHub Actions 에서 돌리지
+# 않습니다(구독 토큰을 무인 CI 에 두는 건 권장되지 않고, Node+claude 설치도 필요).
+# → digest 는 EC2 호스트의 systemd timer 로 실행하세요(deploy/systemd, README 섹션 7).
+#
+# 주의: GitHub cron 은 UTC 기준. 아래는 미국 서머타임(EDT, UTC-4) 기준 — 겨울(EST)엔 +1시간(21:05).
 on:
   schedule:
-    - cron: "0 13 * * 1-5"   # digest  : 13:00 UTC = 09:00 ET (개장 30분 전)
     - cron: "5 20 * * 1-5"   # scanner : 20:05 UTC = 16:05 ET (장 마감 후)
   workflow_dispatch: {}       # Actions 탭에서 수동 실행 가능
 
 jobs:
-  digest:
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 13 * * 1-5'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: python digest.py
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
   scanner:
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '5 20 * * 1-5'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +21,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: python scanner.py
+      - run: python -m backend.jobs.scanner
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

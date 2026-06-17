@@ -61,3 +61,9 @@ def digest_by_date(date: str) -> dict:
 @app.get("/api/scans/{date}")
 def scans_by_date(date: str) -> list[dict]:
     return db.get_scans(date)
+
+
+@app.get("/api/news-scans/{date}")
+def news_scans_by_date(date: str) -> list[dict]:
+    """뉴스 반등 후보(약세+하락 종목 중 호재)."""
+    return db.get_news_scans(date)
