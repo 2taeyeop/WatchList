@@ -67,3 +67,9 @@ def scans_by_date(date: str) -> list[dict]:
 def news_scans_by_date(date: str) -> list[dict]:
     """뉴스 반등 후보(약세+하락 종목 중 호재)."""
     return db.get_news_scans(date)
+
+
+@app.get("/api/holdings-news/{date}")
+def holdings_news_by_date(date: str) -> list[dict]:
+    """내 ETF 구성종목 최신 뉴스(양방향 감성) — 분할매수 페이스 보정용."""
+    return db.get_holdings_news(date)

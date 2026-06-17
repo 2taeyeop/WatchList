@@ -84,6 +84,17 @@ def init_db() -> None:
                 UNIQUE(date, ticker)
             );
             CREATE INDEX IF NOT EXISTS idx_news_scans_date ON news_scans(date);
+            CREATE TABLE IF NOT EXISTS holdings_news (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                date       TEXT NOT NULL,        -- YYYY-MM-DD (ET 거래일)
+                created_at TEXT NOT NULL,
+                ticker     TEXT NOT NULL,        -- 내 ETF 구성종목
+                sentiment  TEXT,                 -- positive | neutral | negative
+                headline   TEXT,                 -- 최신 핵심 뉴스 한 줄
+                source     TEXT,                 -- 출처 URL
+                UNIQUE(date, ticker)
+            );
+            CREATE INDEX IF NOT EXISTS idx_holdings_news_date ON holdings_news(date);
             """
         )
 
@@ -203,4 +214,32 @@ def get_news_scans(date: str) -> list[dict]:
         "ticker": r["ticker"], "change_pct": r["change_pct"],
         "catalyst": r["catalyst"], "view": r["view"], "confidence": r["confidence"],
         "sources": json.loads(r["sources"] or "[]"),
+    } for r in rows]
+
+
+# ---------- 보유 ETF 구성종목 최신 뉴스(양방향) ----------
+def save_holdings_news(items: list[dict], date: str | None = None) -> str:
+    """items: [{ticker, sentiment, headline, source}]. 그날 결과를 통째로 갱신."""
+    date = date or trading_day()
+    now = _now_utc()
+    with connect() as conn:
+        conn.execute("DELETE FROM holdings_news WHERE date=?", (date,))
+        conn.executemany(
+            """INSERT OR REPLACE INTO holdings_news
+                 (date, created_at, ticker, sentiment, headline, source)
+               VALUES (?,?,?,?,?,?)""",
+            [(date, now, it["ticker"], it.get("sentiment", "neutral"),
+              it.get("headline", ""), it.get("source", ""))
+             for it in items],
+        )
+    return date
+
+
+def get_holdings_news(date: str) -> list[dict]:
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM holdings_news WHERE date=? ORDER BY ticker", (date,)).fetchall()
+    return [{
+        "ticker": r["ticker"], "sentiment": r["sentiment"],
+        "headline": r["headline"], "source": r["source"],
     } for r in rows]
