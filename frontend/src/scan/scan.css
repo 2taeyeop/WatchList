@@ -1,0 +1,101 @@
+/* 기술 반등 스캔 후보 (셸의 .card 안) */
+.scans {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* 후보 항목 간 간격 늘림 */
+}
+.scans__item {
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.scans__top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.scans__ticker {
+  font-weight: 700;
+  font-size: clamp(15px, 1.55vw, 18px);
+}
+.scans__desc {
+  font-size: clamp(12px, 1.1vw, 14px); /* 티커 옆 짧은 소개 */
+  color: var(--text-dim);
+}
+.scans__price {
+  color: var(--text-dim);
+  margin-left: auto; /* 가격·등락률은 우측으로 */
+}
+.scans__chg {
+  font-weight: 600;
+  font-size: clamp(18px, 1.65vw, 20px);
+}
+.scans__reasons {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag {
+  font-size: clamp(12px, 1.15vw, 14px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+/* 반등 사유 설명 - 토글 없이 항상 표시 */
+.scans__why {
+  margin-top: 10px;
+}
+.scans__why-label {
+  display: block;
+  font-size: clamp(12px, 1.15vw, 14px);
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.scans__whylist {
+  margin: 0;
+  padding-left: 18px;
+  font-size: clamp(13px, 1.25vw, 16px);
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+/* 소제목(사유명) + 내용(설명)을 각각 한 줄로 줄바꿈 */
+.scans__why-item {
+  margin-bottom: 6px;
+}
+.scans__why-item:last-child {
+  margin-bottom: 0;
+}
+.scans__why-name {
+  display: block;
+  color: var(--text);
+}
+.scans__why-desc {
+  display: block;
+}
+
+/* ── 반응형(모바일): 사유 태그는 한 가로줄 유지(넘치면 가로 스크롤) ── */
+@media (max-width: 640px) {
+  .scans__item {
+    min-width: 0; /* 컬럼 플렉스 아이템이 내부 nowrap 때문에 늘어나 페이지가 가로로 넘치는 것 방지 */
+  }
+  .scans__top {
+    flex-wrap: wrap; /* 좁은 화면에서 티커/이름/가격 줄바꿈(가로 넘침 방지) */
+  }
+  .scans__reasons {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    min-width: 0; /* 스크롤 컨테이너가 부모 폭 안에서 줄어들도록 */
+  }
+  .tag {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
