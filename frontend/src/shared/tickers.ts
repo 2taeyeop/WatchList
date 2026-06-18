@@ -94,3 +94,26 @@ export function tickerLabel(ticker: string): string {
   if (name && desc && name !== desc) return `${name} · ${desc}`;
   return name || desc || "";
 }
+
+// 검색 자동완성 — 티커/한글이름/소개에 query 가 걸리는 종목(우선순위 정렬, 최대 limit).
+// 우선순위: 티커 prefix > 티커 포함 > 이름 포함 > 소개 포함.
+export function searchTickers(query: string, limit = 8): string[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return Object.keys(TICKER_NAME)
+    .map((t) => {
+      const tl = t.toLowerCase();
+      const name = (TICKER_NAME[t] ?? "").toLowerCase();
+      const desc = (TICKER_DESC[t] ?? "").toLowerCase();
+      let score = -1;
+      if (tl.startsWith(q)) score = 0;
+      else if (tl.includes(q)) score = 1;
+      else if (name.includes(q)) score = 2;
+      else if (desc.includes(q)) score = 3;
+      return { t, score };
+    })
+    .filter((x) => x.score >= 0)
+    .sort((a, b) => a.score - b.score || a.t.localeCompare(b.t))
+    .slice(0, limit)
+    .map((x) => x.t);
+}

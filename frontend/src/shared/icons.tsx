@@ -1,7 +1,13 @@
 // nav 탭 · 섹션 헤더 공용 SVG 아이콘(currentColor 상속). 한 곳에서만 정의해 재사용.
 import type { ReactElement } from "react";
 
-export type IconKey = "holdings" | "digest" | "scan" | "news" | "conviction";
+export type IconKey =
+  | "holdings"
+  | "digest"
+  | "scan"
+  | "news"
+  | "conviction"
+  | "search";
 
 export const ICONS: Record<IconKey, ReactElement> = {
   conviction: (
@@ -45,6 +51,13 @@ export const ICONS: Record<IconKey, ReactElement> = {
       <path d="M17 9h3v8a2 2 0 0 1-2 2" />
       <line x1="8" y1="10" x2="13" y2="10" />
       <line x1="8" y1="14" x2="13" y2="14" />
+    </svg>
+  ),
+  search: (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7" />
+      <line x1="16" y1="16" x2="21" y2="21" />
     </svg>
   ),
 };

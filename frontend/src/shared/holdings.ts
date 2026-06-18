@@ -70,6 +70,9 @@ const HOLDINGS: HoldingDef[] = [
   },
 ];
 
+// 분할매수 추적용 - 보유 3종 티커(매수 캘린더/그래프에서 사용).
+export const HOLDING_TICKERS = HOLDINGS.map((h) => h.ticker);
+
 function impactOf(avg: number): Impact {
   if (avg >= 0.5) return "positive";
   if (avg >= -0.25) return "neutral";
@@ -107,7 +110,7 @@ function interpret(impact: Impact, leveraged: boolean): string {
 // (예산 액수만 바꾸려면 BUDGET_USD 만 수정)
 export const BUDGET_USD = 10_000;
 export const DCA_DAYS = 21;
-const DAILY_BASE = BUDGET_USD / DCA_DAYS; // ≈ $476/일
+export const DAILY_BASE = BUDGET_USD / DCA_DAYS; // ≈ $476/일
 
 // 진입 신호 규칙(base): 신호 양호=정상(100%) / 1경고=절반(50%) / 2경고+=대기(0%).
 const PACE: Record<SignalLight, number> = { green: 1.0, yellow: 0.5, red: 0.0, unknown: 0.5 };
