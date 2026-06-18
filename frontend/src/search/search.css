@@ -1,0 +1,209 @@
+/* 종목 검색 화면 - 검색창 + 자동완성 + 결과 카드(공용 .card 재사용) */
+.search {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 검색 바: 입력창 + 검색 + 저장된 데이터 보기 */
+.search__bar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.search__btn,
+.search__saved-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 0 16px;
+  white-space: nowrap;
+  font-size: clamp(13px, 1.3vw, 15px);
+}
+.search__btn:hover,
+.search__saved-btn:hover {
+  background: var(--panel-2);
+}
+.search__btn:disabled {
+  color: var(--text-dim);
+  opacity: 0.5;
+  cursor: default;
+}
+.search__saved-btn.is-active {
+  background: var(--panel-2);
+  outline: 1px solid var(--accent);
+}
+
+/* 검색창(자동완성 드롭다운의 기준 컨테이너) */
+.search__box {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.search__icon {
+  display: inline-flex;
+  color: var(--text-dim);
+  flex: 0 0 auto;
+}
+.search__input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: clamp(14px, 1.4vw, 16px);
+}
+.search__input::placeholder {
+  color: var(--text-dim);
+}
+
+/* 자동완성 드롭다운 */
+.search__suggest {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px var(--overlay);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.search__opt {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 9px 10px;
+  text-align: left;
+  color: var(--text);
+}
+.search__opt:hover {
+  background: var(--panel-2);
+}
+.search__opt-ticker {
+  font-weight: 700;
+  min-width: 52px;
+}
+.search__opt-name {
+  color: var(--text-dim);
+  font-size: clamp(12px, 1.2vw, 14px);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 결과 카드 내부 */
+.search__name {
+  color: var(--text-dim);
+  font-weight: 400;
+}
+.search__quote {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.search__badge {
+  font-weight: 700;
+  font-size: clamp(13px, 1.3vw, 15px);
+}
+/* 분석하기(2단계 Claude 호출) 버튼 */
+.search__analyze {
+  margin-top: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 18px;
+  font-size: clamp(13px, 1.3vw, 15px);
+}
+.search__analyze:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+}
+.search__analyze:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.search__asof {
+  font-size: clamp(12px, 1.15vw, 14px);
+}
+
+/* 저장된 데이터 보기 - 티커별 테이블(날짜 누적) */
+.search__saved {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.search__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(12px, 1.2vw, 14px);
+}
+.search__table th,
+.search__table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+}
+.search__table th {
+  color: var(--text-dim);
+  font-weight: 700;
+  border-top: none;
+}
+.search__td-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.search__td-cat {
+  margin-top: 4px;
+  font-size: clamp(11px, 1.1vw, 13px);
+}
+.search__td-price {
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.search__news p {
+  margin: 0 0 8px;
+}
+.search__news strong {
+  color: var(--text-dim);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.search__headline {
+  font-size: clamp(15px, 1.5vw, 17px);
+  font-weight: 700;
+}
+.search__sources {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.search__sources a {
+  color: var(--accent);
+  font-size: clamp(12px, 1.15vw, 14px);
+  word-break: break-all;
+}
