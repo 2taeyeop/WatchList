@@ -95,6 +95,35 @@ def init_db() -> None:
                 UNIQUE(date, ticker)
             );
             CREATE INDEX IF NOT EXISTS idx_holdings_news_date ON holdings_news(date);
+            CREATE TABLE IF NOT EXISTS searches (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticker     TEXT NOT NULL,        -- 심볼(US) 또는 6자리코드(KR)
+                date       TEXT NOT NULL,        -- 분석 날짜(YYYY-MM-DD)
+                created_at TEXT NOT NULL,
+                name       TEXT,                 -- 정식 종목명
+                market     TEXT,                 -- KR | US
+                price      REAL,
+                change_pct REAL,
+                summary    TEXT,                 -- 핵심 요약
+                catalyst   TEXT,                 -- 호재/촉매
+                view       TEXT,                 -- 단기 관점
+                sentiment  TEXT,                 -- positive | neutral | negative
+                sources    TEXT,                 -- JSON 배열(출처 URL)
+                UNIQUE(ticker, date)             -- 같은 날 재검색 시 갱신
+            );
+            CREATE INDEX IF NOT EXISTS idx_searches_ticker ON searches(ticker);
+            CREATE TABLE IF NOT EXISTS buys (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                date       TEXT NOT NULL,        -- YYYY-MM-DD (ET 거래일)
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                ticker     TEXT NOT NULL,        -- SMH | QLD | SSO
+                amount     REAL,                 -- 그날 매수 금액(USD)
+                price      REAL,                 -- 매수단가(종가) — buy_fill 잡이 채움
+                bought     INTEGER DEFAULT 0,    -- 구입(1)/미구입(0)
+                UNIQUE(date, ticker)
+            );
+            CREATE INDEX IF NOT EXISTS idx_buys_date ON buys(date);
             """
         )
 
@@ -243,3 +272,119 @@ def get_holdings_news(date: str) -> list[dict]:
         "ticker": r["ticker"], "sentiment": r["sentiment"],
         "headline": r["headline"], "source": r["source"],
     } for r in rows]
+
+
+# ---------- 검색 분석(티커별·날짜별 누적) ----------
+def _search_row(row: sqlite3.Row) -> dict:
+    return {
+        "ticker": row["ticker"], "date": row["date"], "created_at": row["created_at"],
+        "name": row["name"], "market": row["market"], "price": row["price"],
+        "change_pct": row["change_pct"], "summary": row["summary"],
+        "catalyst": row["catalyst"], "view": row["view"], "sentiment": row["sentiment"],
+        "sources": json.loads(row["sources"] or "[]"),
+    }
+
+
+def save_search(ticker: str, name: str = "", market: str = "",
+                price: float | None = None, change_pct: float | None = None,
+                summary: str = "", catalyst: str = "", view: str = "",
+                sentiment: str = "neutral", sources: list | None = None,
+                date: str | None = None) -> str:
+    """검색 분석 1건 저장(같은 날·종목은 갱신, 날짜가 다르면 누적)."""
+    date = date or trading_day()
+    with connect() as conn:
+        conn.execute(
+            """INSERT INTO searches
+                 (ticker, date, created_at, name, market, price, change_pct,
+                  summary, catalyst, view, sentiment, sources)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+               ON CONFLICT(ticker, date) DO UPDATE SET
+                 created_at=excluded.created_at, name=excluded.name, market=excluded.market,
+                 price=excluded.price, change_pct=excluded.change_pct, summary=excluded.summary,
+                 catalyst=excluded.catalyst, view=excluded.view, sentiment=excluded.sentiment,
+                 sources=excluded.sources""",
+            (ticker, date, _now_utc(), name, market, price, change_pct,
+             summary, catalyst, view, sentiment,
+             json.dumps(sources or [], ensure_ascii=False)),
+        )
+    return date
+
+
+def get_searches(ticker: str) -> list[dict]:
+    """한 종목의 분석 이력(최신 날짜 순)."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM searches WHERE ticker=? ORDER BY date DESC", (ticker,)).fetchall()
+    return [_search_row(r) for r in rows]
+
+
+def list_searches() -> list[dict]:
+    """저장된 모든 분석(티커·날짜 순) — '저장된 데이터 보기'에서 티커별 그룹핑."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM searches ORDER BY ticker, date DESC").fetchall()
+    return [_search_row(r) for r in rows]
+
+
+# ---------- 분할매수 추적 ----------
+def _buy_row(row: sqlite3.Row) -> dict:
+    return {
+        "date": row["date"], "ticker": row["ticker"], "amount": row["amount"],
+        "price": row["price"], "bought": bool(row["bought"]),
+    }
+
+
+def record_buy(ticker: str, amount: float, bought: bool = True,
+               date: str | None = None, price: float | None = None) -> str:
+    """그날·종목 매수 기록(구입/미구입 + 매수단가). price 를 주면 그 값으로,
+    안 주면 기존 price 유지(buy_fill 잡이 종가로 채울 수 있게)."""
+    date = date or trading_day()
+    now = _now_utc()
+    with connect() as conn:
+        conn.execute(
+            """INSERT INTO buys (date, created_at, updated_at, ticker, amount, bought, price)
+               VALUES (?,?,?,?,?,?,?)
+               ON CONFLICT(date, ticker) DO UPDATE SET
+                 updated_at=excluded.updated_at, amount=excluded.amount,
+                 bought=excluded.bought,
+                 price=COALESCE(excluded.price, buys.price)""",
+            (date, now, now, ticker, float(amount), int(bool(bought)),
+             None if price is None else float(price)),
+        )
+    return date
+
+
+def get_buys(date: str) -> list[dict]:
+    """그날 매수 기록(캘린더용)."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM buys WHERE date=? ORDER BY ticker", (date,)).fetchall()
+    return [_buy_row(r) for r in rows]
+
+
+def list_buys(ticker: str | None = None) -> list[dict]:
+    """그래프/누적용 — 전체(또는 종목별) 매수를 날짜 오름차순으로."""
+    with connect() as conn:
+        if ticker:
+            rows = conn.execute(
+                "SELECT * FROM buys WHERE ticker=? ORDER BY date", (ticker,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM buys ORDER BY date, ticker").fetchall()
+    return [_buy_row(r) for r in rows]
+
+
+def fill_buy_price(date: str, ticker: str, price: float) -> None:
+    """buy_fill 잡 — 마감 후 종가를 매수단가로 채움."""
+    with connect() as conn:
+        conn.execute(
+            "UPDATE buys SET price=?, updated_at=? WHERE date=? AND ticker=?",
+            (float(price), _now_utc(), date, ticker),
+        )
+
+
+def buys_missing_price() -> list[dict]:
+    """종가 미채움(구입했는데 price NULL) — buy_fill 대상."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM buys WHERE bought=1 AND price IS NULL ORDER BY date").fetchall()
+    return [_buy_row(r) for r in rows]
