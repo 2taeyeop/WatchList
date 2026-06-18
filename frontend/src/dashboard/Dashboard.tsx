@@ -1,5 +1,7 @@
-// 대시보드 메인 - 좌측 날짜 사이드바(모바일=드로어) + 상단 날짜 ‹›스테퍼 +
-// 가로 탭(보유종목/다이제스트/반등포착/기술반등/뉴스반등) → 아래 영역 내용을 전환.
+// 대시보드 셸 - 좌측 섹션 사이드바(모바일=드로어) + 섹션별 화면.
+//   daily : 날짜 ‹›스테퍼/달력 + 가로 탭(보유종목/다이제스트/반등포착/기술반등/뉴스반등)
+//   search: 종목 검색 분석
+//   buys  : 분할매수 추적
 import { Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type {
@@ -9,12 +11,15 @@ import type {
   NewsScan,
   HoldingsNews,
 } from "../api/client";
-import DateList from "../sidebar/DateList";
+import NavList from "../sidebar/NavList";
+import type { Section } from "../sidebar/NavList";
+import DateCalendar from "../sidebar/DateCalendar";
 import HoldingsImpact from "../holdings/HoldingsImpact";
 import DigestView from "../digest/DigestView";
 import Conviction from "../conviction/Conviction";
 import ScanList from "../scan/ScanList";
 import NewsRebound from "../news/NewsRebound";
+import SearchView from "../search/SearchView";
 import { analyzeHoldings, buyGuide } from "../shared/holdings";
 import { buildConviction, topGradeColor } from "../shared/conviction";
 import { fmtDate } from "../shared/format";
@@ -48,8 +53,10 @@ export default function Dashboard() {
   const [holdingsNews, setHoldingsNews] = useState<HoldingsNews[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [section, setSection] = useState<Section>("daily");
   const [tab, setTab] = useState<Tab>("holdings");
   const [drawer, setDrawer] = useState(false);
+  const [calOpen, setCalOpen] = useState(false);
 
   // 최초: 날짜 목록 → 최신 자동 선택.
   useEffect(() => {
@@ -91,9 +98,14 @@ export default function Dashboard() {
   const pickDate = (date: string) => {
     setSelected(date);
     setDrawer(false);
+    setCalOpen(false);
+  };
+  const pickSection = (s: Section) => {
+    setSection(s);
+    setDrawer(false);
   };
 
-  // 콘텐츠 가로 스와이프로 탭 이동(왼쪽=다음, 오른쪽=이전).
+  // 콘텐츠 가로 스와이프로 탭 이동(daily 전용, 왼쪽=다음·오른쪽=이전).
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const applySwipe = (dx: number, dy: number) => {
     if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // 수평 스와이프만
@@ -102,9 +114,8 @@ export default function Dashboard() {
     if (dx > 0 && i > 0) setTab(TABS[i - 1].tab);
   };
 
-  // 반등 포착 후보(구성종목 반등을 분할매수 페이스에 반영).
+  // 반등 포착 후보(구성종목 반등을 분할매수 페이스에 반영) + 탭별 테두리 색.
   const convItems = buildConviction(scans, newsScans);
-  // 탭별 테두리 색(내용 반영).
   const guide = digest
     ? buyGuide(
         analyzeHoldings(digest),
@@ -128,6 +139,8 @@ export default function Dashboard() {
     news: newsConfColor(newsScans), // 뉴스 확신도
   };
 
+  const isDaily = section === "daily";
+
   return (
     <div className="dash">
       {drawer && (
@@ -144,7 +157,7 @@ export default function Dashboard() {
             ✕
           </button>
         </h1>
-        <DateList dates={dates} selected={selected} onSelect={pickDate} />
+        <NavList section={section} onSelect={pickSection} />
       </aside>
 
       <main
@@ -156,15 +169,19 @@ export default function Dashboard() {
           const s = swipeStart.current;
           if (!s) return;
           swipeStart.current = null;
-          applySwipe(e.changedTouches[0].clientX - s.x, e.changedTouches[0].clientY - s.y);
+          if (isDaily)
+            applySwipe(
+              e.changedTouches[0].clientX - s.x,
+              e.changedTouches[0].clientY - s.y,
+            );
         }}
       >
-        {/* 상단 바: ☰(모바일) · 날짜 ‹›스테퍼 */}
-        <div className="topbar">
+        {/* 상단 바: ☰(모바일) · 날짜 ‹›스테퍼(daily 전용, 날짜 클릭 시 달력) */}
+        <div className={`topbar${isDaily ? " has-stepper" : ""}`}>
           <button
             className="topbar__menu"
             onClick={() => setDrawer(true)}
-            aria-label="날짜 목록"
+            aria-label="메뉴"
           >
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round">
@@ -173,7 +190,7 @@ export default function Dashboard() {
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          {selected && (
+          {isDaily && selected && (
             <div className="stepper">
               <button
                 onClick={goOlder}
@@ -182,23 +199,27 @@ export default function Dashboard() {
               >
                 ‹
               </button>
-              <span className="stepper__date">
-                {lightMeta(digest?.signal_light ?? null).emoji}{" "}
-                {fmtDate(selected)}
-              </span>
-              <button
-                onClick={goNewer}
-                disabled={idx <= 0}
-                aria-label="다음 날짜"
-              >
+              <button className="stepper__date" onClick={() => setCalOpen(true)}>
+                {lightMeta(digest?.signal_light ?? null).emoji} {fmtDate(selected)}
+              </button>
+              <button onClick={goNewer} disabled={idx <= 0} aria-label="다음 날짜">
                 ›
               </button>
+              {/* 날짜 클릭 시 stepper 바로 아래에 달력 팝오버 */}
+              {calOpen && (
+                <DateCalendar
+                  dates={dates}
+                  selected={selected}
+                  onPick={pickDate}
+                  onClose={() => setCalOpen(false)}
+                />
+              )}
             </div>
           )}
         </div>
 
-        {/* 가로 탭 - 클릭하면 아래 영역 내용 전환 */}
-        {selected && (
+        {/* daily: 가로 탭 - 클릭하면 아래 영역 내용 전환 */}
+        {isDaily && selected && (
           <nav className="homenav">
             {TABS.map((t) => (
               <Fragment key={t.tab}>
@@ -228,17 +249,17 @@ export default function Dashboard() {
           </nav>
         )}
 
-        {error && <div className="dash__error">⚠️ {error}</div>}
-        {!selected && !error && (
+        {isDaily && error && <div className="dash__error">⚠️ {error}</div>}
+
+        {/* daily 콘텐츠 */}
+        {isDaily && !selected && !error && (
           <div className="dash__empty">
             아직 저장된 데이터가 없습니다. 파이프라인(
             <code>backend.jobs.*</code>)을 실행하면 표시됩니다.
           </div>
         )}
-        {loading && <div className="dash__empty">불러오는 중…</div>}
-
-        {/* 탭 내용(영역) - 스와이프는 dash__main 전체에 적용 */}
-        {selected && !loading && (
+        {isDaily && loading && <div className="dash__empty">불러오는 중…</div>}
+        {isDaily && selected && !loading && (
           <div className="dash__content">
             {tab === "holdings" && (
               <HoldingsImpact
@@ -255,6 +276,9 @@ export default function Dashboard() {
             {tab === "news" && <NewsRebound items={newsScans} />}
           </div>
         )}
+
+        {/* search 섹션 */}
+        {section === "search" && <SearchView />}
       </main>
     </div>
   );

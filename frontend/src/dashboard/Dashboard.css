@@ -6,11 +6,17 @@
   min-height: 100vh;
 }
 
-/* 좌측 사이드바(컨테이너) - 내용은 sidebar/DateList */
+/* 좌측 사이드바(컨테이너) - 내용은 sidebar/NavList(섹션 메뉴) */
 .dash__side {
   background: var(--panel);
   border-right: 1px solid var(--border);
   padding: 20px 14px;
+  /* 본문만 스크롤, 사이드바는 고정(뷰포트에 붙어 안 움직임) */
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
 }
 .dash__brand {
   display: flex;
@@ -18,7 +24,7 @@
   justify-content: space-between;
   gap: 8px;
   font-size: clamp(17px, 1.7vw, 21px);
-  margin: 0 0 16px 8px;
+  margin: 0 0 23px 8px;
 }
 .dash__close {
   display: none; /* 데스크탑은 사이드바 고정 → 닫기 버튼 숨김(모바일 드로어만) */
@@ -92,12 +98,17 @@
   color: var(--text-dim);
 }
 
-/* ── 상단 바 / 날짜 ‹›스테퍼(모바일 전용) ── */
+/* ── 상단 바 / 날짜 ‹›스테퍼 ── */
 .topbar {
-  display: none; /* 데스크탑은 사이드바로 날짜 이동 → 숨김. 모바일에서만 표시 */
+  /* 데스크탑 기본 숨김. daily 섹션(.has-stepper)일 때만 스테퍼 노출.
+     모바일은 아래 미디어쿼리에서 ☰ 때문에 항상 flex. */
+  display: none;
   align-items: center;
   gap: 10px;
-  margin-bottom: 18px;
+  /* margin-bottom: 18px; */
+}
+.topbar.has-stepper {
+  display: flex; /* daily: 데스크탑에서도 날짜 스테퍼 표시 */
 }
 .topbar__back {
   background: var(--panel);
@@ -124,12 +135,18 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  position: relative; /* 달력 팝오버(.cal)의 기준 */
 }
-.stepper button {
+/* ‹ › 화살표만(날짜 버튼 .stepper__date 는 제외 - 안 그러면 날짜에 화살표 폰트가 먹음) */
+.stepper > button:not(.stepper__date) {
   background: transparent;
   border: none;
   color: var(--text);
-  font-size: clamp(26px, 2.8vw, 32px); /* 날짜 텍스트(stepper__date)보다 살짝 크게 */
+  font-size: clamp(
+    26px,
+    2.8vw,
+    32px
+  ); /* 날짜 텍스트(stepper__date)보다 살짝 크게 */
   line-height: 1;
   width: 32px;
   height: 32px;
@@ -138,18 +155,28 @@
      반대로 내리려면 이 줄을 margin-top 으로 바꾸면 됨 */
   margin-bottom: 4px;
 }
-.stepper button:disabled {
+.stepper > button:not(.stepper__date):disabled {
   color: var(--text-dim);
   opacity: 0.35;
   cursor: default;
 }
-.stepper button:not(:disabled):hover {
+.stepper > button:not(.stepper__date):not(:disabled):hover {
   background: var(--panel-2);
 }
+/* 날짜 = 버튼(클릭 시 달력 모달). 스테퍼 ‹›와 한 줄, 배경/테두리 없음 */
 .stepper__date {
   font-size: clamp(14px, 1.45vw, 17px);
   min-width: 86px;
   text-align: center;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  /* padding: 4px 8px; */
+  border-radius: 8px;
+  cursor: pointer;
+}
+.stepper__date:hover {
+  background: var(--panel-2);
 }
 
 /* ── 가로 탭 네비(밑줄 스타일, 항상 표시) ── */
@@ -169,6 +196,7 @@
   background: var(--bg); /* 스크롤되는 콘텐츠가 비치지 않게 */
   border-bottom: 1px solid var(--border); /* nav 전체 밑줄 */
   margin-bottom: 16px;
+  margin-top: -20px;
 }
 /* 1축/2축 구분선 - 세로선이 밑줄(border-bottom)까지 내려가고, 그 폭만큼 밑줄을 끊는다 */
 .homenav__divider {
@@ -273,6 +301,9 @@
   .topbar {
     display: flex; /* 사이드바가 드로어로 바뀌면 상단 날짜 스테퍼 표시 */
     margin-bottom: 0; /* homenav 와 간격 축소(dash__main gap 만 사용) */
+  }
+  .topbar.has-stepper {
+    margin-bottom: 12px; /* 모바일 daily 전용: 스테퍼↔homenav 간격 */
   }
   .topbar__menu {
     display: inline-flex;
