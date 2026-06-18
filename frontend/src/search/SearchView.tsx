@@ -9,7 +9,7 @@ import type { Quote, SearchAnalysis } from "../api/client";
 import { searchTickers, tickerLabel } from "../shared/tickers";
 import { fmtPct } from "../shared/format";
 import { ICONS } from "../shared/icons";
-import "./search.css";
+import styles from "./search.module.css";
 
 const SENT_LABEL: Record<string, string> = {
   positive: "호재",
@@ -117,12 +117,12 @@ export default function SearchView() {
   const groups = groupByTicker(saved);
 
   return (
-    <div className="search">
-      <div className="search__bar">
-        <div className="search__box">
-          <span className="search__icon">{ICONS.search}</span>
+    <div className={styles.search}>
+      <div className={styles.search__bar}>
+        <div className={styles.search__box}>
+          <span className={styles.search__icon}>{ICONS.search}</span>
           <input
-            className="search__input"
+            className={styles.search__input}
             value={query}
             placeholder="티커·종목명 (예: NVDA, 005930, Samsung)"
             onChange={(e) => {
@@ -136,19 +136,19 @@ export default function SearchView() {
             }}
           />
           {open && suggestions.length > 0 && (
-            <ul className="search__suggest">
+            <ul className={styles.search__suggest}>
               {suggestions.map((t) => (
                 <li key={t}>
                   <button
-                    className="search__opt"
+                    className={styles.search__opt}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       setQuery(t);
                       doQuote(t);
                     }}
                   >
-                    <span className="search__opt-ticker">{t}</span>
-                    <span className="search__opt-name">{tickerLabel(t)}</span>
+                    <span className={styles["search__opt-ticker"]}>{t}</span>
+                    <span className={styles["search__opt-name"]}>{tickerLabel(t)}</span>
                   </button>
                 </li>
               ))}
@@ -156,14 +156,14 @@ export default function SearchView() {
           )}
         </div>
         <button
-          className="search__btn"
+          className={styles.search__btn}
           onClick={() => doQuote(query)}
           disabled={loadingQuote}
         >
           검색
         </button>
         <button
-          className={`search__saved-btn${savedMode ? " is-active" : ""}`}
+          className={`${styles["search__saved-btn"]}${savedMode ? " " + styles["is-active"] : ""}`}
           onClick={toggleSaved}
         >
           저장된 데이터 보기
@@ -179,19 +179,19 @@ export default function SearchView() {
         ) : groups.length === 0 ? (
           <div className="dash__empty">저장된 분석이 없습니다.</div>
         ) : (
-          <div className="search__saved">
+          <div className={styles.search__saved}>
             {groups.map((rows) => (
               <div className="card" key={rows[0].ticker}>
                 <div className="card__head">
                   <h2>
                     {rows[0].ticker}
                     {rows[0].name && (
-                      <span className="search__name"> · {rows[0].name}</span>
+                      <span className={styles.search__name}> · {rows[0].name}</span>
                     )}
                   </h2>
                   {rows[0].market && <span className="muted">{rows[0].market}</span>}
                 </div>
-                <table className="search__table">
+                <table className={styles.search__table}>
                   <thead>
                     <tr>
                       <th>날짜</th>
@@ -203,17 +203,17 @@ export default function SearchView() {
                   <tbody>
                     {rows.map((s) => (
                       <tr key={s.date}>
-                        <td className="search__td-date">{s.date.slice(5)}</td>
-                        <td className="search__td-sum">
+                        <td className={styles["search__td-date"]}>{s.date.slice(5)}</td>
+                        <td>
                           {s.summary}
                           {s.catalyst && (
-                            <div className="muted search__td-cat">촉매: {s.catalyst}</div>
+                            <div className={`muted ${styles["search__td-cat"]}`}>촉매: {s.catalyst}</div>
                           )}
                         </td>
                         <td style={{ color: SENT_COLOR[s.sentiment] }}>
                           {SENT_LABEL[s.sentiment] ?? s.sentiment}
                         </td>
-                        <td className="search__td-price">
+                        <td className={styles["search__td-price"]}>
                           {priceLabel(s.market, s.price)}
                         </td>
                       </tr>
@@ -241,9 +241,9 @@ export default function SearchView() {
                 <div className="card__head">
                   <h2>
                     {quote.ticker}
-                    {quote.name && <span className="search__name"> · {quote.name}</span>}
+                    {quote.name && <span className={styles.search__name}> · {quote.name}</span>}
                   </h2>
-                  <span className="search__quote">
+                  <span className={styles.search__quote}>
                     <span className="muted">{quote.market} </span>
                     {priceLabel(quote.market, quote.price)}
                     {quote.change_pct != null && (
@@ -265,7 +265,7 @@ export default function SearchView() {
                 </p>
               )}
               <button
-                className="search__analyze"
+                className={styles.search__analyze}
                 onClick={doAnalyze}
                 disabled={analyzing}
               >
@@ -280,18 +280,18 @@ export default function SearchView() {
               <div className="card__head">
                 <h2>
                   {result.ticker}
-                  {result.name && <span className="search__name"> · {result.name}</span>}
-                  <span className="muted search__asof"> · 분석 {result.date}</span>
+                  {result.name && <span className={styles.search__name}> · {result.name}</span>}
+                  <span className={`muted ${styles.search__asof}`}> · 분석 {result.date}</span>
                 </h2>
                 <span
-                  className="search__badge"
+                  className={styles.search__badge}
                   style={{ color: SENT_COLOR[result.sentiment] }}
                 >
                   {SENT_LABEL[result.sentiment] ?? result.sentiment}
                 </span>
               </div>
-              <div className="search__news">
-                {result.summary && <p className="search__headline">{result.summary}</p>}
+              <div className={styles.search__news}>
+                {result.summary && <p className={styles.search__headline}>{result.summary}</p>}
                 {result.catalyst && (
                   <p>
                     <strong>촉매</strong> {result.catalyst}
@@ -303,7 +303,7 @@ export default function SearchView() {
                   </p>
                 )}
                 {result.sources.length > 0 && (
-                  <ul className="search__sources">
+                  <ul className={styles.search__sources}>
                     {result.sources.map((s) => (
                       <li key={s}>
                         <a href={s} target="_blank" rel="noreferrer">

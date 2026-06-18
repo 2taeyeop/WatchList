@@ -3,7 +3,7 @@ import type { Digest } from "../api/client";
 import { lightMeta, INDICATOR_STATUS } from "../shared/signal";
 import { fmtDate } from "../shared/format";
 import { ICONS } from "../shared/icons";
-import "./digest.css";
+import styles from "./digest.module.css";
 
 interface Props {
   date: string;
@@ -28,34 +28,34 @@ export default function DigestView({ date, digest }: Props) {
     <section className="card">
       <div className="card__head">
         <h2><span className="sec-icon">{ICONS.digest}</span>{fmtDate(digest.date)} 다이제스트</h2>
-        <span className="light" style={{ borderColor: light.cssVar, color: light.cssVar }}>
+        <span className={styles.light} style={{ borderColor: light.cssVar, color: light.cssVar }}>
           {light.emoji} 디리스킹 {light.label}
         </span>
       </div>
 
       {digest.conclusion && (
-        <p className="conclusion" style={{ borderLeftColor: light.cssVar }}>
+        <p className={styles.conclusion} style={{ borderLeftColor: light.cssVar }}>
           {digest.conclusion}
         </p>
       )}
 
       {digest.indicators.length > 0 && (
         <>
-          <h3 className="indic__title">주요 지표</h3>
-          <ul className="indic">
+          <h3 className={styles.indic__title}>주요 지표</h3>
+          <ul className={styles.indic}>
             {digest.indicators.map((ind, i) => {
               const m = INDICATOR_STATUS[ind.status] ?? INDICATOR_STATUS.na;
               const nums = [ind.value, ind.change].filter(Boolean).join(" · ");
               return (
-                <li className="indic__item" key={i}>
-                  <div className="indic__head">
-                    <span className="indic__status" style={{ color: m.cssVar }} title={m.label}>
+                <li className={styles.indic__item} key={i}>
+                  <div className={styles.indic__head}>
+                    <span className={styles.indic__status} style={{ color: m.cssVar }} title={m.label}>
                       {m.emoji}
                     </span>
-                    <span className="indic__name">{ind.name}</span>
-                    {nums && <span className="indic__nums">{nums}</span>}
+                    <span className={styles.indic__name}>{ind.name}</span>
+                    {nums && <span className={styles.indic__nums}>{nums}</span>}
                   </div>
-                  {ind.comment && <p className="indic__comment">{ind.comment}</p>}
+                  {ind.comment && <p className={styles.indic__comment}>{ind.comment}</p>}
                 </li>
               );
             })}
@@ -63,7 +63,7 @@ export default function DigestView({ date, digest }: Props) {
         </>
       )}
 
-      <details className="prose">
+      <details className={styles.prose}>
         <summary>전체 다이제스트 본문 보기</summary>
         <pre>{digest.prose}</pre>
       </details>

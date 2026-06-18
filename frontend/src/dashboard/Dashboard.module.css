@@ -48,54 +48,9 @@
   max-width: 920px;
   min-width: 0; /* 그리드 칸을 넘어 가로로 늘어나지 않게(내부 nowrap 넘침 방지) */
 }
-.dash__error {
-  background: color-mix(in srgb, var(--alert) 20%, transparent);
-  border: 1px solid var(--alert);
-  border-radius: 8px;
-  padding: 12px 14px;
-}
-.dash__empty {
-  color: var(--text-dim);
-  padding: 40px 0;
-}
 /* 탭 내용 래퍼(스와이프 영역) - 그리드 칸 넘침 방지 체인 유지 */
 .dash__content {
   min-width: 0;
-}
-
-/* 공용 카드(다이제스트/스캔/뉴스가 컨테이너로 사용) */
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px 20px;
-}
-.card__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.card__head h2 {
-  font-size: clamp(15px, 1.6vw, 19px);
-  margin: 0;
-}
-
-/* 공용 유틸 */
-.muted {
-  color: var(--text-dim);
-}
-.disclaimer {
-  font-size: clamp(12px, 1.15vw, 14px);
-  margin: 14px 0 0;
-}
-/* 섹션 h2 제목 앞 아이콘(nav svg 재사용) - 데스크탑만 표시 */
-.sec-icon {
-  display: inline-flex;
-  vertical-align: middle;
-  margin-right: 6px;
-  color: var(--text-dim);
 }
 
 /* ── 상단 바 / 날짜 ‹›스테퍼 ── */
@@ -327,8 +282,5 @@
   }
   .homenav__label {
     display: none; /* 글자 잘림 -> 아이콘만 */
-  }
-  .sec-icon {
-    display: none; /* 섹션 헤더 아이콘은 데스크탑만 */
   }
 }

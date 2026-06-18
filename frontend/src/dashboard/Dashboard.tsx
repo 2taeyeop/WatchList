@@ -25,7 +25,7 @@ import { buildConviction, topGradeColor } from "../shared/conviction";
 import { fmtDate } from "../shared/format";
 import { lightMeta } from "../shared/signal";
 import { ICONS } from "../shared/icons";
-import "./Dashboard.css";
+import styles from "./Dashboard.module.css";
 
 type Tab = "holdings" | "digest" | "conviction" | "scan" | "news";
 
@@ -142,15 +142,15 @@ export default function Dashboard() {
   const isDaily = section === "daily";
 
   return (
-    <div className="dash">
+    <div className={styles.dash}>
       {drawer && (
-        <div className="dash__overlay" onClick={() => setDrawer(false)} />
+        <div className={styles.dash__overlay} onClick={() => setDrawer(false)} />
       )}
-      <aside className={`dash__side${drawer ? " is-open" : ""}`}>
-        <h1 className="dash__brand">
+      <aside className={`${styles.dash__side}${drawer ? " " + styles["is-open"] : ""}`}>
+        <h1 className={styles.dash__brand}>
           <span>WatchList</span>
           <button
-            className="dash__close"
+            className={styles.dash__close}
             onClick={() => setDrawer(false)}
             aria-label="사이드바 닫기"
           >
@@ -161,7 +161,7 @@ export default function Dashboard() {
       </aside>
 
       <main
-        className="dash__main"
+        className={styles.dash__main}
         onTouchStart={(e) => {
           swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }}
@@ -177,9 +177,9 @@ export default function Dashboard() {
         }}
       >
         {/* 상단 바: ☰(모바일) · 날짜 ‹›스테퍼(daily 전용, 날짜 클릭 시 달력) */}
-        <div className={`topbar${isDaily ? " has-stepper" : ""}`}>
+        <div className={`${styles.topbar}${isDaily ? " " + styles["has-stepper"] : ""}`}>
           <button
-            className="topbar__menu"
+            className={styles.topbar__menu}
             onClick={() => setDrawer(true)}
             aria-label="메뉴"
           >
@@ -191,7 +191,7 @@ export default function Dashboard() {
             </svg>
           </button>
           {isDaily && selected && (
-            <div className="stepper">
+            <div className={styles.stepper}>
               <button
                 onClick={goOlder}
                 disabled={idx < 0 || idx >= dates.length - 1}
@@ -199,7 +199,7 @@ export default function Dashboard() {
               >
                 ‹
               </button>
-              <button className="stepper__date" onClick={() => setCalOpen(true)}>
+              <button className={styles.stepper__date} onClick={() => setCalOpen(true)}>
                 {lightMeta(digest?.signal_light ?? null).emoji} {fmtDate(selected)}
               </button>
               <button onClick={goNewer} disabled={idx <= 0} aria-label="다음 날짜">
@@ -220,19 +220,19 @@ export default function Dashboard() {
 
         {/* daily: 가로 탭 - 클릭하면 아래 영역 내용 전환 */}
         {isDaily && selected && (
-          <nav className="homenav">
+          <nav className={styles.homenav}>
             {TABS.map((t) => (
               <Fragment key={t.tab}>
                 {/* 1축(보유·다이제스트) / 2축(반등 포착·기술·뉴스) 구분선 */}
                 {t.tab === "conviction" && (
-                  <span className="homenav__divider" aria-hidden="true" />
+                  <span className={styles.homenav__divider} aria-hidden="true" />
                 )}
                 <button
-                  className={`homenav__item${tab === t.tab ? " is-active" : ""}`}
+                  className={`${styles.homenav__item}${tab === t.tab ? " " + styles["is-active"] : ""}`}
                   onClick={() => setTab(t.tab)}
                 >
                   <span
-                    className="homenav__inner"
+                    className={styles.homenav__inner}
                     style={{
                       borderBottomColor:
                         tab === t.tab
@@ -240,8 +240,8 @@ export default function Dashboard() {
                           : `color-mix(in srgb, ${tabColor[t.tab]} 35%, transparent)`,
                     }}
                   >
-                    <span className="homenav__icon">{ICONS[t.tab]}</span>
-                    <span className="homenav__label">{t.title}</span>
+                    <span className={styles.homenav__icon}>{ICONS[t.tab]}</span>
+                    <span className={styles.homenav__label}>{t.title}</span>
                   </span>
                 </button>
               </Fragment>
@@ -260,7 +260,7 @@ export default function Dashboard() {
         )}
         {isDaily && loading && <div className="dash__empty">불러오는 중…</div>}
         {isDaily && selected && !loading && (
-          <div className="dash__content">
+          <div className={styles.dash__content}>
             {tab === "holdings" && (
               <HoldingsImpact
                 digest={digest}

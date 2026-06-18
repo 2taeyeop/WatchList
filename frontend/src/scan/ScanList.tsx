@@ -4,7 +4,7 @@ import { fmtPrice, fmtPct } from "../shared/format";
 import { explainReason } from "../shared/scanReasons";
 import { tickerLabel } from "../shared/tickers";
 import { ICONS } from "../shared/icons";
-import "./scan.css";
+import styles from "./scan.module.css";
 
 interface Props {
   scans: Scan[];
@@ -23,17 +23,17 @@ export default function ScanList({ scans }: Props) {
       {scans.length === 0 ? (
         <p className="muted">이 날짜의 반등 후보가 없습니다.</p>
       ) : (
-        <ul className="scans">
+        <ul className={styles.scans}>
           {scans.map((s) => (
-            <li key={s.ticker} className="scans__item">
-              <div className="scans__top">
-                <span className="scans__ticker">{s.ticker}</span>
+            <li key={s.ticker} className={styles.scans__item}>
+              <div className={styles.scans__top}>
+                <span className={styles.scans__ticker}>{s.ticker}</span>
                 {tickerLabel(s.ticker) && (
-                  <span className="scans__desc">{tickerLabel(s.ticker)}</span>
+                  <span className={styles.scans__desc}>{tickerLabel(s.ticker)}</span>
                 )}
-                <span className="scans__price">{fmtPrice(s.price)}</span>
+                <span className={styles.scans__price}>{fmtPrice(s.price)}</span>
                 <span
-                  className="scans__chg"
+                  className={styles.scans__chg}
                   style={{
                     color: s.change_pct >= 0 ? "var(--ok)" : "var(--alert)",
                   }}
@@ -48,13 +48,13 @@ export default function ScanList({ scans }: Props) {
                   </span>
                 ))}
               </div> */}
-              <div className="scans__why">
+              <div className={styles.scans__why}>
                 {/* <span className="scans__why-label">왜 반등 신호인가</span> */}
-                <ul className="scans__whylist">
+                <ul className={styles.scans__whylist}>
                   {s.reasons.map((r, i) => (
-                    <li key={i} className="scans__why-item">
-                      <b className="scans__why-name">{r}</b>
-                      <span className="scans__why-desc">
+                    <li key={i} className={styles["scans__why-item"]}>
+                      <b className={styles["scans__why-name"]}>{r}</b>
+                      <span className={styles["scans__why-desc"]}>
                         {explainReason(r)}
                       </span>
                     </li>

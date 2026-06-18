@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { DateEntry } from "../api/client";
 import { lightMeta } from "../shared/signal";
-import "./sidebar.css";
+import styles from "./sidebar.module.css";
 
 interface Props {
   dates: DateEntry[];
@@ -48,49 +48,49 @@ export default function DateCalendar({ dates, selected, onPick, onClose }: Props
   return (
     <>
       {/* 투명 백드롭 - 바깥 클릭 닫기 */}
-      <div className="cal__backdrop" onClick={onClose} />
-      <div className="cal" role="dialog" aria-modal="true">
-        <div className="cal__head">
+      <div className={styles.cal__backdrop} onClick={onClose} />
+      <div className={styles.cal} role="dialog" aria-modal="true">
+        <div className={styles.cal__head}>
           <button
-            className="cal__nav"
+            className={styles.cal__nav}
             onClick={() => setYm(prev)}
             aria-label="이전 달"
           >
             ‹
           </button>
-          <span className="cal__title">
+          <span className={styles.cal__title}>
             {y}년 {m}월
           </span>
           <button
-            className="cal__nav"
+            className={styles.cal__nav}
             onClick={() => setYm(next)}
             aria-label="다음 달"
           >
             ›
           </button>
         </div>
-        <div className="cal__grid cal__weekdays">
+        <div className={`${styles.cal__grid} ${styles.cal__weekdays}`}>
           {WD.map((w) => (
-            <span key={w} className="cal__wd">
+            <span key={w} className={styles.cal__wd}>
               {w}
             </span>
           ))}
         </div>
-        <div className="cal__grid">
+        <div className={styles.cal__grid}>
           {cells.map((d, i) => {
-            if (d === null) return <span key={i} className="cal__cell is-empty" />;
+            if (d === null) return <span key={i} className={`${styles.cal__cell} ${styles["is-empty"]}`} />;
             const date = iso(d);
             const entry = byDate.get(date);
             const meta = lightMeta(entry?.signal_light ?? null);
             return (
               <button
                 key={i}
-                className={`cal__cell${date === selected ? " is-active" : ""}`}
+                className={`${styles.cal__cell}${date === selected ? " " + styles["is-active"] : ""}`}
                 disabled={!entry}
                 onClick={() => entry && onPick(date)}
               >
                 <span
-                  className="cal__day"
+                  className={styles.cal__day}
                   style={entry ? { color: meta.cssVar } : undefined}
                 >
                   {d}

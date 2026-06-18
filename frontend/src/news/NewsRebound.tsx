@@ -3,7 +3,7 @@ import type { NewsScan } from "../api/client";
 import { fmtPct } from "../shared/format";
 import { tickerLabel } from "../shared/tickers";
 import { ICONS } from "../shared/icons";
-import "./news.css";
+import styles from "./news.module.css";
 
 const CONF: Record<string, { label: string; cssVar: string }> = {
   high: { label: "확신 높음", cssVar: "var(--ok)" },
@@ -26,23 +26,23 @@ export default function NewsRebound({ items }: Props) {
       {items.length === 0 ? (
         <p className="muted">약세+하락 종목 중 호재로 잡힌 후보가 없습니다.</p>
       ) : (
-        <ul className="news">
+        <ul className={styles.news}>
           {items.map((n) => {
             const c = CONF[n.confidence] ?? CONF.low;
             return (
-              <li key={n.ticker} className="news__item" style={{ borderColor: c.cssVar }}>
-                <div className="news__top">
-                  <span className="news__ticker">{n.ticker}</span>
+              <li key={n.ticker} className={styles.news__item} style={{ borderColor: c.cssVar }}>
+                <div className={styles.news__top}>
+                  <span className={styles.news__ticker}>{n.ticker}</span>
                   {tickerLabel(n.ticker) && (
-                    <span className="news__name">{tickerLabel(n.ticker)}</span>
+                    <span className={styles.news__name}>{tickerLabel(n.ticker)}</span>
                   )}
-                  <span className="news__conf" style={{ color: c.cssVar, borderColor: c.cssVar }}>
+                  <span className={styles.news__conf} style={{ color: c.cssVar, borderColor: c.cssVar }}>
                     {c.label}
                   </span>
                 </div>
-                <p className="news__catalyst">{n.catalyst}</p>
-                {n.view && <p className="news__view muted">→ {n.view}</p>}
-                <span className="news__chg">{fmtPct(n.change_pct)}</span>
+                <p className={styles.news__catalyst}>{n.catalyst}</p>
+                {n.view && <p className={`${styles.news__view} muted`}>→ {n.view}</p>}
+                <span className={styles.news__chg}>{fmtPct(n.change_pct)}</span>
               </li>
             );
           })}

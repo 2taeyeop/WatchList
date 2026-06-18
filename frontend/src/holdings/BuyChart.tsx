@@ -1,6 +1,7 @@
 // 매수단가 선형 그래프(SVG, 의존성 0) - 보유 3종(SMH/QLD/SSO)의 날짜별 매수단가.
 import type { Buy } from "../api/client";
 import { HOLDING_TICKERS } from "../shared/holdings";
+import styles from "./buys.module.css";
 
 // 종목별 색(color.css 토큰) - 그래프 선·범례 + 캘린더 칩이 공유.
 export const TICKER_COLORS: Record<string, string> = {
@@ -46,21 +47,21 @@ export default function BuyChart({ buys }: Props) {
   })).filter((s) => s.points.length > 0);
 
   return (
-    <div className="buychart">
-      <svg viewBox={`0 0 ${W} ${H}`} className="buychart__svg" role="img" aria-label="매수단가 그래프">
+    <div className={styles.buychart}>
+      <svg viewBox={`0 0 ${W} ${H}`} className={styles.buychart__svg} role="img" aria-label="매수단가 그래프">
         {/* y축(최대/최소가) */}
-        <text x={PAD.l - 8} y={PAD.t + 8} className="buychart__axis" textAnchor="end">
+        <text x={PAD.l - 8} y={PAD.t + 8} className={styles.buychart__axis} textAnchor="end">
           ${max.toFixed(0)}
         </text>
-        <text x={PAD.l - 8} y={PAD.t + innerH} className="buychart__axis" textAnchor="end">
+        <text x={PAD.l - 8} y={PAD.t + innerH} className={styles.buychart__axis} textAnchor="end">
           ${min.toFixed(0)}
         </text>
         {/* x축(처음/끝 날짜) */}
-        <text x={PAD.l} y={H - 8} className="buychart__axis" textAnchor="start">
+        <text x={PAD.l} y={H - 8} className={styles.buychart__axis} textAnchor="start">
           {dates[0].slice(5)}
         </text>
         {dates.length > 1 && (
-          <text x={W - PAD.r} y={H - 8} className="buychart__axis" textAnchor="end">
+          <text x={W - PAD.r} y={H - 8} className={styles.buychart__axis} textAnchor="end">
             {dates[dates.length - 1].slice(5)}
           </text>
         )}
@@ -69,7 +70,7 @@ export default function BuyChart({ buys }: Props) {
           <g key={s.ticker} style={{ color: TICKER_COLORS[s.ticker] ?? "var(--text)" }}>
             {s.points.length > 1 && (
               <polyline
-                className="buychart__line"
+                className={styles.buychart__line}
                 points={s.points
                   .map((b) => `${x(b.date)},${y(b.price as number)}`)
                   .join(" ")}
@@ -81,17 +82,17 @@ export default function BuyChart({ buys }: Props) {
                 cx={x(b.date)}
                 cy={y(b.price as number)}
                 r={3}
-                className="buychart__dot"
+                className={styles.buychart__dot}
               />
             ))}
           </g>
         ))}
       </svg>
-      <div className="buychart__legend">
+      <div className={styles.buychart__legend}>
         {series.map((s) => (
-          <span key={s.ticker} className="buychart__leg">
+          <span key={s.ticker} className={styles.buychart__leg}>
             <span
-              className="buychart__swatch"
+              className={styles.buychart__swatch}
               style={{ background: TICKER_COLORS[s.ticker] }}
             />
             {s.ticker}

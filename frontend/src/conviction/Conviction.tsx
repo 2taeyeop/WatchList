@@ -7,7 +7,7 @@ import { tickerLabel } from "../shared/tickers";
 import { lightMeta } from "../shared/signal";
 import { fmtPrice, fmtPct } from "../shared/format";
 import { ICONS } from "../shared/icons";
-import "./conviction.css";
+import styles from "./conviction.module.css";
 
 interface Props {
   scans: Scan[];
@@ -30,53 +30,53 @@ export default function Conviction({ scans, news, digest }: Props) {
       </div>
 
       {/* 등급 요약 + 시장 레짐 */}
-      <div className="conv__summary">
-        <span className="conv__legend">
-          <span className="conv__leg" style={{ color: "var(--ok)" }}>
+      <div className={styles.conv__summary}>
+        <span className={styles.conv__legend}>
+          <span className={styles.conv__leg} style={{ color: "var(--ok)" }}>
             <b>A</b> 동반 {counts.A}
           </span>
-          <span className="conv__leg" style={{ color: "var(--caution)" }}>
+          <span className={styles.conv__leg} style={{ color: "var(--caution)" }}>
             <b>B</b> 기술 {counts.B}
           </span>
-          <span className="conv__leg" style={{ color: "var(--muted)" }}>
+          <span className={styles.conv__leg} style={{ color: "var(--muted)" }}>
             <b>C</b> 촉매 {counts.C}
           </span>
         </span>
-        <span className="conv__market" style={{ color: light.cssVar }}>
+        <span className={styles.conv__market} style={{ color: light.cssVar }}>
           시장 {light.emoji} {light.label}
         </span>
       </div>
       {digest?.signal_light === "red" && (
-        <p className="conv__warn">⚠ 시장 신호등 🔴 — 추세 역행 반등은 승률이 낮습니다. 비중을 보수적으로.</p>
+        <p className={styles.conv__warn}>⚠ 시장 신호등 🔴 — 추세 역행 반등은 승률이 낮습니다. 비중을 보수적으로.</p>
       )}
 
       {items.length === 0 ? (
         <p className="muted">이 날짜의 반등 후보가 없습니다.</p>
       ) : (
-        <ul className="conv">
+        <ul className={styles.conv}>
           {items.map((it) => (
-            <li key={it.ticker} className="conv__item" style={{ borderColor: it.meta.cssVar }}>
-              <div className="conv__top">
-                <span className="conv__grade" style={{ background: it.meta.cssVar }}>
+            <li key={it.ticker} className={styles.conv__item} style={{ borderColor: it.meta.cssVar }}>
+              <div className={styles.conv__top}>
+                <span className={styles.conv__grade} style={{ background: it.meta.cssVar }}>
                   {it.meta.grade}
                 </span>
-                <span className="conv__ticker">{it.ticker}</span>
+                <span className={styles.conv__ticker}>{it.ticker}</span>
                 {tickerLabel(it.ticker) && (
-                  <span className="conv__name">{tickerLabel(it.ticker)}</span>
+                  <span className={styles.conv__name}>{tickerLabel(it.ticker)}</span>
                 )}
-                <span className="conv__headline" style={{ color: it.meta.cssVar }}>
+                <span className={styles.conv__headline} style={{ color: it.meta.cssVar }}>
                   {it.meta.headline}
                 </span>
               </div>
-              <p className="conv__rationale">{it.meta.rationale}</p>
+              <p className={styles.conv__rationale}>{it.meta.rationale}</p>
 
               {/* 촉매(왜) */}
               {it.news && (
-                <div className="conv__block">
-                  <span className="conv__block-label">촉매</span>
-                  <p className="conv__catalyst">{it.news.catalyst}</p>
-                  {it.news.view && <p className="conv__view muted">→ {it.news.view}</p>}
-                  <div className="conv__meta">
+                <div className={styles.conv__block}>
+                  <span className={styles["conv__block-label"]}>촉매</span>
+                  <p className={styles.conv__catalyst}>{it.news.catalyst}</p>
+                  {it.news.view && <p className={`${styles.conv__view} muted`}>→ {it.news.view}</p>}
+                  <div className={styles.conv__meta}>
                     <span>전일 {fmtPct(it.news.change_pct)}</span>
                     <span>확신 {CONF_LABEL[it.news.confidence] ?? it.news.confidence}</span>
                     {it.news.sources.length > 0 && (
@@ -88,22 +88,22 @@ export default function Conviction({ scans, news, digest }: Props) {
 
               {/* 기술 */}
               {it.tech && (
-                <div className="conv__block">
-                  <span className="conv__block-label">기술</span>
-                  <div className="conv__metarow">
-                    <span className="conv__price">{fmtPrice(it.tech.price)}</span>
+                <div className={styles.conv__block}>
+                  <span className={styles["conv__block-label"]}>기술</span>
+                  <div className={styles.conv__metarow}>
+                    <span className={styles.conv__price}>{fmtPrice(it.tech.price)}</span>
                     <span
-                      className="conv__chg"
+                      className={styles.conv__chg}
                       style={{ color: it.tech.change_pct >= 0 ? "var(--ok)" : "var(--alert)" }}
                     >
                       {fmtPct(it.tech.change_pct)}
                     </span>
                   </div>
-                  <ul className="conv__reasons">
+                  <ul className={styles.conv__reasons}>
                     {it.tech.reasons.map((r, i) => (
                       <li key={i}>
-                        <b className="conv__reason-name">{r}</b>
-                        <span className="conv__reason-desc">{explainReason(r)}</span>
+                        <b className={styles["conv__reason-name"]}>{r}</b>
+                        <span className={styles["conv__reason-desc"]}>{explainReason(r)}</span>
                       </li>
                     ))}
                   </ul>
@@ -111,7 +111,7 @@ export default function Conviction({ scans, news, digest }: Props) {
               )}
 
               {/* 무효화(손절) */}
-              <p className="conv__inval">무효화 · {it.invalidation}</p>
+              <p className={styles.conv__inval}>무효화 · {it.invalidation}</p>
             </li>
           ))}
         </ul>

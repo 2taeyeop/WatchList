@@ -13,7 +13,7 @@ import {
 import { buildConviction } from "../shared/conviction";
 import { lightMeta } from "../shared/signal";
 import BuyChart, { TICKER_COLORS } from "./BuyChart";
-import "./buys.css";
+import styles from "./buys.module.css";
 
 const SPLIT = DAILY_BASE / HOLDING_TICKERS.length; // 종목별 1일 분할액(기준액)
 const WD = ["일", "월", "화", "수", "목", "금", "토"];
@@ -286,9 +286,9 @@ export default function BuyTracking({
   const next = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 };
 
   return (
-    <div className="buys">
-      <div className="buys__bar">
-        <div className="buys__nav">
+    <div className={styles.buys}>
+      <div className={styles.buys__bar}>
+        <div className={styles.buys__nav}>
           <button
             type="button"
             onClick={() => setYm(prev)}
@@ -296,7 +296,7 @@ export default function BuyTracking({
           >
             ‹
           </button>
-          <span className="buys__title">
+          <span className={styles.buys__title}>
             {y}년 {m}월
           </span>
           <button
@@ -307,14 +307,14 @@ export default function BuyTracking({
             ›
           </button>
         </div>
-        <button className="buys__toggle" type="button" onClick={toggleView}>
+        <button className={styles.buys__toggle} type="button" onClick={toggleView}>
           {view === "cal" ? CHART_ICON : CAL_ICON}
           {view === "cal" ? "그래프 보기" : "캘린더 보기"}
         </button>
       </div>
 
       <div
-        className="buys__swap"
+        className={styles.buys__swap}
         ref={swapRef}
         style={minH ? { minHeight: minH } : undefined}
       >
@@ -322,17 +322,22 @@ export default function BuyTracking({
           <BuyChart buys={buys} />
         ) : (
           <>
-            <div className="buys__grid buys__weekdays">
+            <div className={`${styles.buys__grid} ${styles.buys__weekdays}`}>
               {WD.map((w) => (
-                <span key={w} className="buys__wd">
+                <span key={w} className={styles.buys__wd}>
                   {w}
                 </span>
               ))}
             </div>
-            <div className="buys__grid">
+            <div className={styles.buys__grid}>
               {cells.map((d, i) => {
                 if (d === null)
-                  return <span key={i} className="buys__cell is-empty" />;
+                  return (
+                    <span
+                      key={i}
+                      className={`${styles.buys__cell} ${styles["is-empty"]}`}
+                    />
+                  );
                 const date = iso(d);
                 const dayMap = byDate.get(date);
                 const bought = HOLDING_TICKERS.filter(
@@ -346,8 +351,8 @@ export default function BuyTracking({
                   <button
                     type="button"
                     key={i}
-                    className={`buys__cell${date === selected ? " is-active" : ""}${
-                      bought.length ? " has-buy" : ""
+                    className={`${styles.buys__cell}${date === selected ? " " + styles["is-active"] : ""}${
+                      bought.length ? " " + styles["has-buy"] : ""
                     }`}
                     style={
                       sigColor
@@ -356,9 +361,9 @@ export default function BuyTracking({
                     }
                     onClick={() => openDay(date)}
                   >
-                    <span className="buys__day">{d}</span>
+                    <span className={styles.buys__day}>{d}</span>
                     {bought.length > 0 && (
-                      <span className="buys__chips">
+                      <span className={styles.buys__chips}>
                         {bought.map((t) => {
                           const amt = dayMap!.get(t)!.amount;
                           // 칩 색 = 그날 그 종목 영향(없으면 중립).
@@ -367,11 +372,11 @@ export default function BuyTracking({
                           return (
                             <span
                               key={t}
-                              className="buys__chip"
+                              className={styles.buys__chip}
                               style={{ color: impColor }}
                             >
-                              <span className="buys__chip-tkr">{t}</span>
-                              <span className="buys__chip-px">
+                              <span className={styles["buys__chip-tkr"]}>{t}</span>
+                              <span className={styles["buys__chip-px"]}>
                                 ${Math.round(amt)}
                               </span>
                             </span>
@@ -386,8 +391,8 @@ export default function BuyTracking({
 
             {/* 선택 날짜 매수 입력 - 저장 버튼은 머리말 우측 */}
             {selected && (
-              <div className="buys__editor">
-                <div className="buys__editor-head">
+              <div className={styles.buys__editor}>
+                <div className={styles["buys__editor-head"]}>
                   <span>
                     {selected} 매수 기록
                     {selected === todayIso && (
@@ -395,7 +400,7 @@ export default function BuyTracking({
                     )}
                     {msg && (
                       <span
-                        className={`buys__msg buys__msg--${msg.ok ? "ok" : "err"}`}
+                        className={`${styles.buys__msg} ${msg.ok ? styles["buys__msg--ok"] : styles["buys__msg--err"]}`}
                       >
                         {" · "}
                         {msg.text}
@@ -404,27 +409,27 @@ export default function BuyTracking({
                   </span>
                   <button
                     type="button"
-                    className="buys__save"
+                    className={styles.buys__save}
                     onClick={save}
                     disabled={saving}
                   >
                     {saving ? "저장 중…" : "저장"}
                   </button>
                 </div>
-                <div className="buys__cards">
+                <div className={styles.buys__cards}>
                   {HOLDING_TICKERS.map((t) => (
-                    <div key={t} className="buys__card">
+                    <div key={t} className={styles.buys__card}>
                       <div
-                        className="buys__card-tkr"
+                        className={styles["buys__card-tkr"]}
                         style={{ color: guideColors?.[t] ?? TICKER_COLORS[t] }}
                       >
                         {t}
                       </div>
-                      <div className="buys__field">
-                        <span className="buys__num-dollar">$</span>
-                        <div className="buys__num">
+                      <div className={styles.buys__field}>
+                        <span className={styles["buys__num-dollar"]}>$</span>
+                        <div className={styles.buys__num}>
                           <input
-                            className="buys__num-input"
+                            className={styles["buys__num-input"]}
                             type="text"
                             inputMode="numeric"
                             size={(draft[t]?.amount ?? "").length || 1}
@@ -438,10 +443,10 @@ export default function BuyTracking({
                               })
                             }
                           />
-                          <div className="buys__num-steps">
+                          <div className={styles["buys__num-steps"]}>
                             <button
                               type="button"
-                              className="buys__num-step"
+                              className={styles["buys__num-step"]}
                               onClick={() => bump(t, STEP)}
                               aria-label="금액 증가"
                             >
@@ -449,7 +454,7 @@ export default function BuyTracking({
                             </button>
                             <button
                               type="button"
-                              className="buys__num-step"
+                              className={styles["buys__num-step"]}
                               onClick={() => bump(t, -STEP)}
                               aria-label="금액 감소"
                             >
@@ -458,19 +463,19 @@ export default function BuyTracking({
                           </div>
                         </div>
                       </div>
-                      <div className="buys__card-rec">
+                      <div className={styles["buys__card-rec"]}>
                         추천 ${Math.round(recAmounts[t] ?? SPLIT)}
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="buys__base muted">
+                <div className={`${styles.buys__base} muted`}>
                   기준액 ${Math.round(SPLIT)} · 종목별 1일 분할
                 </div>
               </div>
             )}
 
-            <div className="buys__summary muted">
+            <div className={`${styles.buys__summary} muted`}>
               누적 매수 금액{" "}
               <b>${Math.round(cumulative).toLocaleString("en-US")}</b>
             </div>

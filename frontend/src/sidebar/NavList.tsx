@@ -2,7 +2,7 @@
 // homenav(데일리 모니터링 내부 5탭)와는 별개 — 여기선 어떤 기능 화면을 볼지만 고른다.
 import type { IconKey } from "../shared/icons";
 import { ICONS } from "../shared/icons";
-import "./sidebar.css";
+import styles from "./sidebar.module.css";
 
 export type Section = "daily" | "search";
 
@@ -18,16 +18,16 @@ interface Props {
 
 export default function NavList({ section, onSelect }: Props) {
   return (
-    <nav className="navlist">
-      <ul className="navlist__items">
+    <nav className={styles.navlist}>
+      <ul className={styles.navlist__items}>
         {ITEMS.map((it) => (
           <li key={it.section}>
             <button
-              className={`navlist__item${section === it.section ? " is-active" : ""}`}
+              className={`${styles.navlist__item}${section === it.section ? " " + styles["is-active"] : ""}`}
               onClick={() => onSelect(it.section)}
             >
-              <span className="navlist__icon">{ICONS[it.icon]}</span>
-              <span className="navlist__label">{it.label}</span>
+              <span className={styles.navlist__icon}>{ICONS[it.icon]}</span>
+              <span>{it.label}</span>
             </button>
           </li>
         ))}
