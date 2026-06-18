@@ -45,9 +45,9 @@
 }
 .holdings__news-dot {
   flex: 0 0 auto;
-  align-self: center;
-  width: 8px;
-  height: 8px;
+  /* align-self: center; */
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
 }
 .holdings__news-tkr {

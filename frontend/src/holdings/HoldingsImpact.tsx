@@ -13,6 +13,7 @@ import {
 import { INDICATOR_STATUS, lightMeta } from "../shared/signal";
 import { fmtUSD } from "../shared/format";
 import { ICONS } from "../shared/icons";
+import BuyTracking from "./BuyTracking";
 import "./holdings.css";
 
 interface Props {
@@ -114,7 +115,9 @@ export default function HoldingsImpact({
           {bd.adjustments.map((a, i) => (
             <div key={i} className="buyguide__row">
               <span className="muted">{a.label}</span>
-              <span style={{ color: a.delta >= 0 ? "var(--ok)" : "var(--alert)" }}>
+              <span
+                style={{ color: a.delta >= 0 ? "var(--ok)" : "var(--alert)" }}
+              >
                 {a.delta >= 0 ? "+" : "-"}
                 {pct(Math.abs(a.delta))}
               </span>
@@ -122,7 +125,8 @@ export default function HoldingsImpact({
           ))}
           <div className="buyguide__row buyguide__row--total">
             <span>
-              합계{bd.capped && <span className="buyguide__cap"> · 🔴 상한</span>}
+              합계
+              {bd.capped && <span className="buyguide__cap"> · 🔴 상한</span>}
             </span>
             <b style={{ color: light.cssVar }}>{fmtUSD(guide.todayTotal)}</b>
           </div>
@@ -206,6 +210,14 @@ export default function HoldingsImpact({
         ※ 신호등·지표를 종목 민감도로 환산한 참고용 가이드입니다. 매매 지시가
         아니며 최종 판단은 본인이.
       </p>
+
+      {/* 분할매수 추적 - 캘린더(구입여부·매수단가) + 전환 그래프.
+          오늘 날짜 매수 기록엔 위 가이드의 종목별 추천 금액을 자동입력. */}
+      <BuyTracking
+        guideAmounts={Object.fromEntries(guide.rows.map((r) => [r.ticker, r.amount]))}
+        guideColors={Object.fromEntries(holdings.map((h) => [h.ticker, h.meta.cssVar]))}
+        activeDate={digest.date}
+      />
 
       {/* 카드 클릭 → 해당 종목 관련 구성종목 뉴스 모달 */}
       {modalTicker && (

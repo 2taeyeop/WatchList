@@ -1,0 +1,351 @@
+/* 분할매수 추적 - 보유종목 화면 하단(캘린더 + 전환 그래프) */
+.buys {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border); /* 보유종목 본문과 구분 */
+}
+/* 캘린더/그래프가 바뀌는 영역 - 전환 시 min-height 로 높이 고정(스크롤 안 튐) */
+.buys__swap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.buys__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.buys__nav {
+  display: flex;
+  align-items: center;
+  /* gap: 6px; */
+}
+.buys__nav button {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  margin-bottom: 5px;
+}
+.buys__nav button:hover {
+  background: var(--panel-2);
+}
+.buys__title {
+  font-size: clamp(14px, 1.4vw, 16px);
+  font-weight: 700;
+  min-width: 92px;
+  text-align: center;
+}
+.buys__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none; /* 테두리 없이 아이콘+글자만 */
+  color: var(--text-dim);
+  padding: 4px 6px;
+  font-size: clamp(12px, 1.2vw, 14px);
+}
+.buys__toggle:hover {
+  color: var(--text);
+}
+
+/* 캘린더 그리드 */
+.buys__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.buys__weekdays {
+  margin-bottom: 2px;
+}
+.buys__wd {
+  text-align: center;
+  font-size: clamp(11px, 1.05vw, 13px);
+  color: var(--text-dim);
+  padding: 2px 0;
+}
+.buys__cell {
+  aspect-ratio: 1; /* 항상 정사각형 */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px; /* 좌우 패딩 ↑ - 칩(종목/금액)이 셀 가장자리에 붙지 않게 */
+  color: var(--text);
+  overflow: hidden;
+}
+.buys__cell.is-empty {
+  visibility: hidden;
+  background: transparent;
+  border: none;
+}
+.buys__cell:not(.is-empty):hover {
+  background: var(--panel-2);
+}
+.buys__cell.has-buy {
+  border-color: var(--accent);
+}
+.buys__cell.is-active {
+  outline: 1px solid var(--accent);
+}
+.buys__day {
+  text-align: center; /* 상단 정가운데 */
+  font-size: clamp(11px, 1.1vw, 13px);
+  color: var(--text-dim);
+}
+.buys__chips {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 4px;
+}
+/* 칩 = 종목(좌) · 금액(우). 색은 종목 색(인라인 style). */
+.buys__chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10px;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+.buys__chip-tkr {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.buys__chip-px {
+  min-width: 4ch; /* $+3자리 폭 확보 → 자릿수 달라도 시작($) 위치 동일 */
+  text-align: left;
+  white-space: nowrap;
+}
+/* 매수일(has-buy) - 글자 크게(날짜는 셀 신호등 색 상속, 칩은 종목 영향색) */
+.buys__cell.has-buy .buys__day {
+  color: inherit;
+  font-weight: 700;
+  font-size: clamp(13px, 1.35vw, 16px);
+}
+.buys__cell.has-buy .buys__chip {
+  font-size: clamp(11px, 1.15vw, 13px);
+}
+
+/* 선택 날짜 매수 입력 */
+.buys__editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.buys__editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 700;
+  font-size: clamp(13px, 1.3vw, 15px);
+}
+/* 저장 결과 피드백 */
+.buys__msg {
+  font-weight: 400;
+}
+.buys__msg--ok {
+  color: var(--ok);
+}
+.buys__msg--err {
+  color: var(--alert);
+}
+/* 매수 기록 = 종목별 정사각형 카드(폭 제한 후 중앙 정렬) */
+.buys__cards {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.buys__card {
+  flex: 1;
+  min-width: 0;
+  max-width: 150px; /* 3등분 폭이 과하게 커지지 않게 */
+  aspect-ratio: 1; /* 정사각형 카드 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* 내용(종목·추천·금액) 세로 중앙 */
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  overflow: hidden;
+}
+.buys__card-tkr {
+  font-weight: 700;
+  font-size: clamp(22px, 1.6vw, 22px);
+  text-align: center;
+}
+/* 입력 필드 아래 추천 금액(회색) - 카드 gap(8px) 을 모든 요소에 균일 적용 */
+.buys__card-rec {
+  font-size: clamp(13px, 1.1vw, 15px);
+  color: var(--text-dim);
+}
+.buys__field {
+  /* ▼ 간격 조절(여기 두 값만 수정) ▼
+     --num-gap-dollar : $ ↔ 숫자 · --num-gap-arrow : 숫자 ↔ 화살표 */
+  --num-gap-dollar: 2px;
+  --num-gap-arrow: 4px;
+  width: 100%;
+  display: flex;
+  flex-direction: row; /* $ (좌) + 숫자 + 화살표 */
+  align-items: center;
+  justify-content: center;
+  gap: var(--num-gap-dollar);
+  color: var(--text-dim);
+}
+/* 금액 입력 = $ + 입력 + 항상 보이는 svg 스테퍼(네이티브 화살표 제거) */
+/* 숫자 + 화살표 묶음(내용폭으로 조여 $ 가 숫자에 붙게). 박스는 안 보임 */
+.buys__num {
+  display: flex;
+  align-items: center;
+  gap: var(--num-gap-arrow); /* 숫자 ↔ 화살표 (.buys__field 변수 상속) */
+}
+/* $ - 입력 박스 밖 좌측, 크게 */
+.buys__num-dollar {
+  color: var(--text-dim);
+  font-weight: 700;
+  font-size: clamp(22px, 2.2vw, 26px);
+  margin-bottom: 3px;
+}
+.buys__num-input {
+  width: auto; /* size 속성(글자수) 기준 폭 */
+  field-sizing: content; /* 지원 브라우저: 내용 폭에 정확히 맞춤 */
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  text-align: center;
+  font-size: clamp(24px, 1.5vw, 20px);
+}
+/* Chrome/Safari 네이티브 스피너 제거 */
+.buys__num-input::-webkit-outer-spin-button,
+.buys__num-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.buys__num-steps {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 0 0 auto;
+  /* gap: 10px; */
+}
+.buys__num-step {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 0;
+  line-height: 0;
+}
+.buys__num-step:hover {
+  color: var(--text);
+}
+.buys__save {
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 5px 16px;
+  font-size: clamp(12px, 1.2vw, 14px);
+}
+.buys__save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.buys__base {
+  font-size: clamp(11px, 1.1vw, 13px);
+}
+
+.buys__summary {
+  font-size: clamp(12px, 1.25vw, 14px);
+}
+.buys__summary b {
+  color: var(--text);
+}
+
+/* 매수단가 그래프 */
+.buychart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.buychart__svg {
+  width: 100%;
+  height: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.buychart__axis {
+  fill: var(--text-dim);
+  font-size: 11px;
+}
+.buychart__line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.buychart__dot {
+  fill: currentColor;
+}
+.buychart__legend {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  font-size: clamp(12px, 1.2vw, 14px);
+}
+.buychart__leg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.buychart__swatch {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+/* ── 반응형(모바일) ── */
+@media (max-width: 640px) {
+  /* 달력 셀이 좁음 → 종목·금액 숨기고 날짜만 */
+  .buys__chips {
+    display: none;
+  }
+  /* 정사각형 카드가 작아짐 → 텍스트 더 작게 */
+  .buys__card-tkr {
+    font-size: clamp(11px, 3.4vw, 16px);
+  }
+  .buys__card-rec {
+    font-size: clamp(8px, 2.2vw, 11px);
+  }
+  .buys__num-dollar {
+    font-size: clamp(11px, 3.2vw, 17px);
+  }
+  .buys__num-input {
+    font-size: clamp(12px, 3.6vw, 18px);
+  }
+}
