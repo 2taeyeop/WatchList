@@ -90,6 +90,9 @@ def handle_command(text: str) -> None:
     elif cmd == "/log":
         logs = db.recent_logs(10)
         _send("\n".join(db.format_log(r) for r in logs) if logs else "기록이 없습니다.")
+    elif cmd == "/newchat":
+        reply_mod.reset_chat_session()
+        _send("대화를 초기화했습니다. 다음 질문부터 새 대화로 시작합니다.")
     elif cmd == "/setday":
         day = int(args[0]) if args and args[0].isdigit() else None
         if day is None or not 1 <= day <= 31:

@@ -2,11 +2,16 @@
 
 클로드는 자유 질문(명령어도 사진도 아닌 텍스트)에만 쓰고, 그 경로에도
 규칙서(prompts/rulebook.md) + 봇 인격 가드레일(작업지시 6절)을 강제한다.
+자유 질문은 claude --resume 으로 대화 세션을 유지한다(가드레일·규칙서는 이력이
+아니라 매 호출 시스템 프롬프트로 주입 — 규칙서 개정이 진행 중 대화에도 즉시 반영).
 """
 import os
 
+from backend import db
 from backend.claude_runner import run_claude
 from backend.rules import Judgment, Order
+
+_CHAT_SESSION_KEY = "chat_session_id"
 
 RULEBOOK_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts", "rulebook.md")
 
@@ -28,7 +33,8 @@ USAGE = """사용법
 /withdraw <원화금액> — 생계 인출(즉시 협조)
 /log — 최근 기록 10줄
 /setday <일> — 적립일 설정
-/phase <SETUP|ENTRY|STEADY> — 단계 전환"""
+/phase <SETUP|ENTRY|STEADY> — 단계 전환
+/newchat — 자유 질문 대화 초기화(새 대화 시작)"""
 
 # 자유 질문용 봇 자체 설명 — 규칙서에는 없는 명령어·플로우 지식(이게 빠지면
 # 봇이 자기 명령어를 설명 못 한다).
@@ -45,6 +51,8 @@ BOT_GUIDE = """- 잔고 스크린샷 전송: 수치 추출 → 확인 게이트(
 - /phase <SETUP|ENTRY|STEADY>: 운용 단계 전환 — SETUP=가동 전(사진을 보내도 판정하지 않음),
   ENTRY=SGOV→TQQQ 5주 분할 진입기(/entry 사용 가능, 전환 시 1주차부터),
   STEADY=정상 운용(TQQQ/JEPI). 최초 설정 시 /phase 와 /setday 를 먼저 해야 봇이 가동된다.
+- /newchat: 자유 질문 대화 세션 초기화. 자유 질문은 대화가 이어지므로(직전 질문·답변 기억)
+  주제를 바꾸거나 처음부터 다시 시작하고 싶을 때 사용.
 - 리마인더: 적립일 아침·12월 셋째 월요일·ENTRY 월요일에만 발송(그 외 정기 푸시 없음).
 - 위기 모드: 나스닥100이 2년 최고 종가 대비 −20% 이하로 확인되면 모든 회신 상단에
   예고된 낙폭 배너가 붙고, −10% 안쪽 회복 확인 시 해제."""
@@ -78,7 +86,7 @@ def render_judgment(j: Judgment, drawdown: float) -> tuple[str, str]:
     return "\n\n".join(parts), weights
 
 
-FREEFORM_TMPL = """당신은 아래 투자 규칙서의 '집행 보조' 텔레그램 봇입니다. 규칙서 내용과
+CHAT_SYSTEM_TMPL = """당신은 아래 투자 규칙서의 '집행 보조' 텔레그램 봇입니다. 규칙서 내용과
 봇 사용법에 근거해 사용자의 질문에 답하세요. 봇의 명령어·단계·사용 방법에 대한 질문에는
 [봇 사용법] 내용대로 정확히 안내하세요.
 
@@ -99,17 +107,31 @@ FREEFORM_TMPL = """당신은 아래 투자 규칙서의 '집행 보조' 텔레�
 {guide}
 
 [투자 규칙서]
-{rulebook}
-
-[사용자 질문]
-{question}"""
+{rulebook}"""
 
 
-def build_freeform_prompt(question: str) -> str:
+def build_chat_system_prompt() -> str:
     with open(RULEBOOK_PATH, encoding="utf-8") as f:
         rulebook = f.read()
-    return FREEFORM_TMPL.format(rulebook=rulebook, guide=BOT_GUIDE, question=question)
+    return CHAT_SYSTEM_TMPL.format(rulebook=rulebook, guide=BOT_GUIDE)
 
 
 def answer_freeform(question: str) -> str:
-    return run_claude(build_freeform_prompt(question), timeout=300)
+    """대화 세션을 유지하며 답변 — 세션 유실(컨테이너 교체 등) 시 새 대화로 폴백."""
+    system = build_chat_system_prompt()
+    session_id = db.kv_get(_CHAT_SESSION_KEY)
+    try:
+        text, new_id = run_claude(question, system_prompt=system, resume=session_id,
+                                  timeout=300, return_session_id=True)
+    except RuntimeError:
+        if not session_id:
+            raise
+        text, new_id = run_claude(question, system_prompt=system,
+                                  timeout=300, return_session_id=True)
+    if new_id:
+        db.kv_set(_CHAT_SESSION_KEY, new_id)
+    return text
+
+
+def reset_chat_session() -> None:
+    db.kv_delete(_CHAT_SESSION_KEY)

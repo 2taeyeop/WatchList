@@ -25,17 +25,30 @@ def _remove_session_transcript(session_id: str | None) -> None:
             pass
 
 
+def build_cmd(prompt: str, allowed_tools: tuple[str, ...] = (),
+              system_prompt: str | None = None, resume: str | None = None) -> list[str]:
+    cmd = [CLAUDE_BIN, "-p", prompt, "--output-format", "json"]
+    if allowed_tools:
+        cmd += ["--allowedTools", ",".join(allowed_tools)]
+    if system_prompt:
+        # 시스템 프롬프트는 세션 이력에 저장되지 않아 매 호출 주입 — 규칙서 개정이
+        # 진행 중인 대화에도 즉시 반영된다.
+        cmd += ["--append-system-prompt", system_prompt]
+    if resume:
+        cmd += ["--resume", resume]  # 이전 세션 이어받기(대화 유지)
+    return cmd
+
+
 def run_claude(prompt: str, allowed_tools: tuple[str, ...] = (), timeout: int = 600,
-               cleanup_session: bool = False) -> str:
+               cleanup_session: bool = False, system_prompt: str | None = None,
+               resume: str | None = None, return_session_id: bool = False):
     env = dict(os.environ)
     dropped = [k for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
                if env.pop(k, None) is not None]
     if dropped:
         print(f"구독 인증 강제: 자식 프로세스에서 {', '.join(dropped)} 제외(API 과금 차단)")
 
-    cmd = [CLAUDE_BIN, "-p", prompt, "--output-format", "json"]
-    if allowed_tools:
-        cmd += ["--allowedTools", ",".join(allowed_tools)]
+    cmd = build_cmd(prompt, allowed_tools, system_prompt, resume)
     proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
                           env=env, timeout=timeout)
     if proc.returncode != 0:
@@ -49,6 +62,8 @@ def run_claude(prompt: str, allowed_tools: tuple[str, ...] = (), timeout: int = 
     result = (envelope.get("result") or "").strip()
     if not result:
         raise RuntimeError("claude 응답이 비어 있음")
+    if return_session_id:
+        return result, envelope.get("session_id")
     return result
 
 

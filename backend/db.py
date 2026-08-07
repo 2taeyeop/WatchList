@@ -78,6 +78,10 @@ def init_db() -> None:
                 kind       TEXT NOT NULL,   -- monthly | entry | december | withdraw
                 payload    TEXT NOT NULL    -- 추출값+시장값 JSON(확인 게이트 통과 전)
             );
+            CREATE TABLE IF NOT EXISTS kv (
+                key   TEXT PRIMARY KEY,     -- 예: chat_session_id(자유 질문 대화 세션)
+                value TEXT NOT NULL
+            );
             """
         )
         conn.execute("INSERT OR IGNORE INTO state (id) VALUES (1)")
@@ -126,6 +130,23 @@ def recent_logs(limit: int = 10) -> list[dict]:
 
 def format_log(row: dict) -> str:
     return f"{row['date']} | {row['action']} | {row['drawdown']} | {row['weights']} | {row['memo']}"
+
+
+# ---------- 범용 key-value ----------
+def kv_get(key: str) -> str | None:
+    with connect() as conn:
+        row = conn.execute("SELECT value FROM kv WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def kv_set(key: str, value: str) -> None:
+    with connect() as conn:
+        conn.execute("INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)", (key, value))
+
+
+def kv_delete(key: str) -> None:
+    with connect() as conn:
+        conn.execute("DELETE FROM kv WHERE key=?", (key,))
 
 
 # ---------- 확인 게이트 ----------

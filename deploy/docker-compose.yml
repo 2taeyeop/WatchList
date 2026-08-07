@@ -12,5 +12,9 @@ services:
       WATCHLIST_DB: /app/data/watchlist.db
     volumes:
       - ../data:/app/data                # SQLite(state·로그)를 호스트에 보존
+      - claude-home:/root/.claude        # 자유 질문 대화 세션이 재배포에도 유지되게
     restart: unless-stopped
     # ports 없음 — 롱폴링이라 노출 엔드포인트 0개(작업지시 7절)
+
+volumes:
+  claude-home:
