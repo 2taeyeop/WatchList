@@ -18,16 +18,8 @@ import traceback
 from backend import db, market, notify, notion, rules, vision
 from backend import reply as reply_mod
 
-USAGE = """사용법
-잔고 스크린샷(토스)만 보내면 월간 루틴 판정(/monthly 와 동일)
-
-/monthly — 월간 적립 판정
-/entry — 진입기 주간 루틴(SGOV→TQQQ)
-/december — 12월 리밸런싱 + 공제·손실 수확
-/withdraw <원화금액> — 생계 인출(즉시 협조)
-/log — 최근 기록 10줄
-/setday <일> — 적립일 설정
-/phase <SETUP|ENTRY|STEADY> — 단계 전환"""
+# /help 와 자유 질문 지식원이 같은 원본을 쓰게 reply 쪽 상수를 사용.
+USAGE = reply_mod.USAGE
 
 _KIND_KR = {"monthly": "월간 루틴", "entry": "진입기 주간", "december": "12월 리밸런싱",
             "withdraw": "생계 인출"}
@@ -109,7 +101,8 @@ def handle_command(text: str) -> None:
     elif cmd == "/phase":
         phase = args[0].upper() if args else ""
         if phase not in ("SETUP", "ENTRY", "STEADY"):
-            _send("사용법: /phase <SETUP|ENTRY|STEADY>")
+            _send("사용법: /phase <SETUP|ENTRY|STEADY>\n"
+                  "SETUP=가동 전 · ENTRY=SGOV→TQQQ 5주 분할 진입기 · STEADY=정상 운용(TQQQ/JEPI)")
             return
         updates = {"phase": phase}
         if phase == "ENTRY":
