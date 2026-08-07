@@ -1,8 +1,8 @@
+# 로컬 빌드·개발용 컴포즈 — 서버 배포는 docker-compose.server.yml(이미지 pull) 사용.
 # 사용: docker compose -f deploy/docker-compose.yml up -d --build
-# 리마인더(매일 아침 1회)는 호스트 crontab 으로 실행 — README 참조:
-#   0 23 * * * docker compose -f <repo>/deploy/docker-compose.yml run --rm bot python -m backend.jobs.reminder
 services:
   bot:
+    image: 2taeyeop/watchlist-bot:latest
     build:
       context: ..
       dockerfile: deploy/Dockerfile

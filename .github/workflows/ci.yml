@@ -1,4 +1,4 @@
-# CI — 판정 엔진 유닛·시나리오 테스트만 실행. 잡 실행·배포·정기 푸시 없음.
+# CI/CD — 테스트 통과 시 Docker Hub 로 이미지 발행. 서버는 clone 없이 pull 만으로 배포.
 name: ci
 
 on:
@@ -15,3 +15,26 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python -m pytest tests/ -q
+
+  docker:
+    # 배포 브랜치 push 에서만 발행 — 시크릿 DOCKERHUB_USERNAME·DOCKERHUB_TOKEN 필요
+    needs: test
+    if: >
+      github.event_name == 'push' &&
+      (github.ref_name == 'feat/telegram-rulebot' ||
+       github.ref_name == github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/watchlist-bot:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/watchlist-bot:${{ github.sha }}

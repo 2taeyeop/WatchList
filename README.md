@@ -56,23 +56,31 @@ WatchList/
 │  └─ jobs/reminder.py  ← 매일 아침 리마인더 잡
 ├─ prompts/rulebook.md  ← 투자 규칙서(개정 시 이 파일 갱신 = 봇 지식 갱신)
 ├─ tests/               ← 유닛·시나리오 테스트(pytest)
-├─ deploy/              ← Dockerfile + docker-compose.yml(bot 컨테이너, 포트 없음)
+├─ deploy/              ← Dockerfile + compose(로컬 빌드용 / 서버 pull용 .server.yml)
 ├─ .github/workflows/ci.yml ← 테스트 CI(잡 실행·배포 없음)
 └─ data/                ← SQLite 파일(런타임 생성, 커밋 제외)
 ```
 
-## 설치 (EC2 — Docker)
+## 배포 (EC2 — Docker Hub pull, 리포 clone 불필요)
+
+CI(ci.yml)가 배포 브랜치 push 시 테스트 통과 후 `watchlist-bot` 이미지를 Docker Hub 로
+발행합니다 (GitHub Secrets: `DOCKERHUB_USERNAME`·`DOCKERHUB_TOKEN` 필요).
 
 ```bash
-git clone <repo> ~/watchlist && cd ~/watchlist
-cp .env.example .env   # TELEGRAM_BOT_TOKEN·TELEGRAM_CHAT_ID·CLAUDE_CODE_OAUTH_TOKEN 필수
-docker compose -f deploy/docker-compose.yml up -d --build
+# 서버 최초 1회 셋업
+mkdir -p ~/watchlist-bot && cd ~/watchlist-bot
+# deploy/docker-compose.server.yml 내용을 docker-compose.yml 로 저장
+# .env 작성: TELEGRAM_BOT_TOKEN·TELEGRAM_CHAT_ID·CLAUDE_CODE_OAUTH_TOKEN 필수
+
+# 배포(이후 갱신도 동일)
+docker compose pull && docker compose up -d
 docker logs -f watchlist-bot   # "규칙서 집행봇 시작 — 롱폴링" 확인
 
 # 리마인더(매일 아침 1회) — 호스트 crontab (서버 TZ=UTC 기준 23:00 = 08:00 KST)
-# crontab -e 에 추가:
-# 0 23 * * * docker compose -f $HOME/watchlist/deploy/docker-compose.yml run --rm bot python -m backend.jobs.reminder >> $HOME/watchlist/data/reminder.log 2>&1
+# 0 23 * * * cd $HOME/watchlist-bot && docker compose run --rm bot python -m backend.jobs.reminder >> data/reminder.log 2>&1
 ```
+
+로컬 빌드가 필요하면 `docker compose -f deploy/docker-compose.yml up -d --build`.
 
 - 봇은 **롱폴링**이라 도메인·인증서·공개 포트가 전혀 필요 없습니다
   (노출 엔드포인트 0개 — compose 에 ports 없음).

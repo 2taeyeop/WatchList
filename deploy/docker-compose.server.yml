@@ -1,0 +1,14 @@
+# 서버 전용 컴포즈 — 리포 clone 불필요. 이 파일과 .env 만 서버 디렉토리에 두면 됨.
+# 배포: docker compose pull && docker compose up -d
+# 리마인더(crontab): 0 23 * * * cd $HOME/watchlist-bot && docker compose run --rm bot python -m backend.jobs.reminder >> data/reminder.log 2>&1
+services:
+  bot:
+    image: 2taeyeop/watchlist-bot:latest
+    container_name: watchlist-bot
+    env_file: .env                       # TELEGRAM_*·CLAUDE_CODE_OAUTH_TOKEN 필수
+    environment:
+      WATCHLIST_DB: /app/data/watchlist.db
+    volumes:
+      - ./data:/app/data                 # SQLite(state·로그) 호스트 보존
+    restart: unless-stopped
+    # ports 없음 — 롱폴링이라 노출 엔드포인트 0개
