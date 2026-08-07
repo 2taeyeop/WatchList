@@ -7,6 +7,7 @@ nonce 바인딩) → ✅ 시 판정(rules 순수 함수) → 회신 전송 성�
 실행: python -m backend.bot  (TELEGRAM_BOT_TOKEN·TELEGRAM_CHAT_ID 필수)
 """
 import glob
+import json
 import math
 import os
 import secrets
@@ -135,8 +136,8 @@ def handle_text(text: str) -> None:
         _session["await_input"] = None
         _send(f"실현손익 {krw:+,.0f}원 확인. 이제 잔고 스크린샷을 보내주세요.")
         return
-    # 자유 질문 — 규칙서를 지식원으로 클로드에 위임(가드레일 포함, 작업지시 4-4)
-    _send("규칙서 기준으로 확인 중입니다… (수십 초)")
+    # 자유 대화 — 개인 비서(규칙서·현황·웹검색 지식원, 집행 가드레일 유지)
+    _send("확인 중입니다… (수십 초)")
     _send(reply_mod.answer_freeform(text))
 
 
@@ -255,6 +256,8 @@ def _commit(result: dict) -> None:
     for log in result["logs"]:
         row = db.append_log(**log)
         notion.sync_log(row)
+    if result.get("snapshot"):
+        db.kv_set("last_snapshot", json.dumps(result["snapshot"], ensure_ascii=False))
 
 
 def run_judgment(kind: str, p: dict) -> str:
@@ -277,6 +280,18 @@ def compute_judgment(kind: str, p: dict) -> dict:
         tqqq_shares=shares.get("TQQQ", 0), jepi_shares=shares.get("JEPI", 0),
         tqqq_price=prices["TQQQ"], jepi_price=prices["JEPI"])
 
+    # 대화 비서가 '현재 투자 현황'을 알도록 마지막 확인 잔고 요약(주문 체결 전 기준)
+    snapshot = {
+        "date": db.today_kst(), "kind": kind,
+        "tqqq_shares": snap.tqqq_shares, "jepi_shares": snap.jepi_shares,
+        "sgov_shares": shares.get("SGOV", 0),
+        "tqqq_price": snap.tqqq_price, "jepi_price": snap.jepi_price,
+        "cash_usd": data.get("cash_usd"),
+        "total_usd": snap.total_value, "tqqq_weight": snap.tqqq_weight,
+        "fx": md["fx"], "drawdown": dd,
+        "pnl_krw": {t: pnl.get(t) for t in shares},
+    }
+
     updates: dict = {"crisis_active": rules.crisis_update(dd, state["crisis_active"])}
     updates.update(rules.episode_reset_updates(
         dd, state["episode_active"], state["tier1_fired"], state["tier2_fired"]))
@@ -292,7 +307,7 @@ def compute_judgment(kind: str, p: dict) -> dict:
         text, log = _render(accel, dd, updates, memo="가속조항 우선")
         text += "\n\n가속 주문 체결 후 잔고를 다시 캡처해 보내면 원래 용건" \
                 f"({_KIND_KR[kind]})을 이어서 판정합니다."
-        return {"text": text, "updates": updates, "logs": [log], "intercepted": True}
+        return {"text": text, "updates": updates, "logs": [log], "intercepted": True, "snapshot": snapshot}
 
     if kind == "monthly":
         # 예수금(달러)에는 환전분·분배금·이월 잔돈이 모두 담겨 있어 그대로 가용액으로 쓴다.
@@ -300,7 +315,7 @@ def compute_judgment(kind: str, p: dict) -> dict:
         j = rules.judge_monthly(snap, data["cash_usd"])
         updates["carry_usd"] = j.carry_delta_usd
         text, log = _render(j, dd, updates, memo="월간 루틴")
-        return {"text": text, "updates": updates, "logs": [log], "intercepted": False}
+        return {"text": text, "updates": updates, "logs": [log], "intercepted": False, "snapshot": snapshot}
 
     if kind == "entry":
         j = rules.judge_entry(shares.get("SGOV", 0), state["entry_week"],
@@ -310,7 +325,7 @@ def compute_judgment(kind: str, p: dict) -> dict:
         text, log = _render(j, dd, updates, memo="진입기")
         if j.state_updates.get("phase") == "STEADY":
             text += "\n\n진입 5회 완료 — STEADY 로 자동 전환했습니다."
-        return {"text": text, "updates": updates, "logs": [log], "intercepted": False}
+        return {"text": text, "updates": updates, "logs": [log], "intercepted": False, "snapshot": snapshot}
 
     if kind == "december":
         j = rules.judge_december(snap, year, state["skip_december_year"])
@@ -331,7 +346,7 @@ def compute_judgment(kind: str, p: dict) -> dict:
                 h_text += "\n\n⑤ 기록: " + db.format_log(h_log)
             text += "\n\n──── 공제 수확 ────\n\n" + h_text + \
                 "\n\n12월 말일이 임박했다면 결제일(T+1)의 연내 귀속 여부를 확인하세요."
-        return {"text": text, "updates": updates, "logs": logs, "intercepted": False}
+        return {"text": text, "updates": updates, "logs": logs, "intercepted": False, "snapshot": snapshot}
 
     if kind == "withdraw":
         gain_per = {t: (pnl[t] / shares[t]) if shares.get(t) and pnl.get(t) is not None else None
@@ -342,7 +357,7 @@ def compute_judgment(kind: str, p: dict) -> dict:
         text, log = _render(j, dd, updates, memo="생계 인출 — 정상 절차")
         if gain_per["TQQQ"] is None and gain_per["JEPI"] is None:
             text += "\n\n(평가손익을 읽지 못해 예상 실현손익·세금 보고는 생략했습니다.)"
-        return {"text": text, "updates": updates, "logs": [log], "intercepted": False}
+        return {"text": text, "updates": updates, "logs": [log], "intercepted": False, "snapshot": snapshot}
 
     raise ValueError(f"알 수 없는 판정 종류: {kind}")
 

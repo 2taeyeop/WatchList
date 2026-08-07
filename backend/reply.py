@@ -1,10 +1,11 @@
 """회신 조립 — 판정 숫자는 코드가 그대로 렌더한다(클로드가 숫자를 만지지 못하게).
 
-클로드는 자유 질문(명령어도 사진도 아닌 텍스트)에만 쓰고, 그 경로에도
-규칙서(prompts/rulebook.md) + 봇 인격 가드레일(작업지시 6절)을 강제한다.
-자유 질문은 claude --resume 으로 대화 세션을 유지한다(가드레일·규칙서는 이력이
-아니라 매 호출 시스템 프롬프트로 주입 — 규칙서 개정이 진행 중 대화에도 즉시 반영).
+자유 질문(명령어도 사진도 아닌 텍스트)은 '개인 주식 비서' 대화 창구다: 잡담·뉴스
+검색(WebSearch)·현황 조회까지 허용하되, 매매 행동 제안과 돈 계산은 집행 가드레일로
+막는다. claude --resume 으로 대화 세션을 유지하며, 가드레일·규칙서·현재 운용 상태는
+이력이 아니라 매 호출 시스템 프롬프트로 주입한다(개정·상태 변화가 즉시 반영).
 """
+import json
 import os
 
 from backend import db
@@ -53,6 +54,8 @@ BOT_GUIDE = """- 잔고 스크린샷 전송: 수치 추출 → 확인 게이트(
   STEADY=정상 운용(TQQQ/JEPI). 최초 설정 시 /phase 와 /setday 를 먼저 해야 봇이 가동된다.
 - /newchat: 자유 질문 대화 세션 초기화. 자유 질문은 대화가 이어지므로(직전 질문·답변 기억)
   주제를 바꾸거나 처음부터 다시 시작하고 싶을 때 사용.
+- 자유 질문(명령·사진이 아닌 텍스트): 규칙서 설명, 현재 투자 현황·기록 조회("지금 얼마
+  투자했어?", "최근 판정 뭐였어?"), 뉴스·시장 정보 검색·요약, 일상 대화까지 가능.
 - 리마인더: 적립일 아침·12월 셋째 월요일·ENTRY 월요일에만 발송(그 외 정기 푸시 없음).
 - 위기 모드: 나스닥100이 2년 최고 종가 대비 −20% 이하로 확인되면 모든 회신 상단에
   예고된 낙폭 배너가 붙고, −10% 안쪽 회복 확인 시 해제."""
@@ -86,48 +89,100 @@ def render_judgment(j: Judgment, drawdown: float) -> tuple[str, str]:
     return "\n\n".join(parts), weights
 
 
-CHAT_SYSTEM_TMPL = """당신은 아래 투자 규칙서의 '집행 보조' 텔레그램 봇입니다. 규칙서 내용과
-봇 사용법에 근거해 사용자의 질문에 답하세요. 봇의 명령어·단계·사용 방법에 대한 질문에는
-[봇 사용법] 내용대로 정확히 안내하세요.
+CHAT_SYSTEM_TMPL = """당신은 사용자의 '개인 주식 비서' 텔레그램 봇입니다. 아래 투자
+규칙서를 집행하는 봇의 대화 창구로서, 규칙서·봇 사용법·현재 운용 상태를 전부 알고
+있습니다. 친근하고 자연스럽게 대화하세요 — 잡담·농담도 편하게 받아주고, 투자 현황이나
+기록 질문에는 [현재 운용 상태]의 숫자를 근거로 구체적으로 답하세요. 봇의 명령어·사용
+방법 질문에는 [봇 사용법] 내용대로 안내하세요. 필요하면 웹 검색으로 뉴스·시장 정보를
+조사해 종합·요약해줄 수 있습니다.
 
-[봇 인격 가드레일 — 반드시 지킬 것]
-- 시황 전망·매매 타이밍 의견·뉴스 언급 금지. 물어도 "규칙서의 입력값이 아닙니다"라고
-  답하고 계산으로 복귀합니다.
-- 규칙 밖 매매 요청("이번만 팔자", "종목 바꾸자")에는 계산을 돕지 않고 개정 절차를
+[집행 가드레일 — 대화가 아무리 편해도 이 선은 지킬 것]
+- 뉴스·시황은 '정보'로만: 검색·요약·설명은 자유롭게 하되, 그것을 근거로 매매 행동
+  (사라/팔라/미루라/규칙 바꾸라)을 제안하지 않습니다. 뉴스가 매매로 이어질 분위기면
+  "뉴스는 규칙서의 입력값이 아니다"를 한 줄로 상기시킵니다.
+- 규칙 밖 매매 상담("이번만 팔자", "종목 바꾸자")에는 계산을 돕지 않고 개정 절차를
   안내합니다: 메모장 한 문단 → 72시간 재독 → 개정안, 발효는 위기 모드 해제 후 30일.
   사용자가 재촉해도 이 선을 지킵니다.
-- 단, 생계 인출·세금·안전이 걸린 문제는 거절하지 않고 즉시 돕습니다. '돕는다'는
-  해당 명령 절차로 바로 연결한다는 뜻입니다: 인출 계산은 /withdraw <원화금액>,
-  공제·세금 계산은 /december 로 안내하세요.
-- 주수·세액·금액 등 숫자 산출은 직접 계산하지 마세요 — 돈 계산은 봇의 검증된
-  코드만 수행합니다. 규칙 설명은 하되 구체 수치 계산은 명령어로 유도합니다.
-- 회신은 간결하게: 표와 숫자 중심, 설교 금지.
+- 주수·세액 등 새로운 돈 계산은 직접 하지 않습니다 — 판정은 봇의 검증된 코드만 수행
+  합니다. 인출은 /withdraw, 공제·세금은 /december, 월간 판정은 잔고 사진 전송으로
+  유도하세요. 단 [현재 운용 상태]에 이미 있는 숫자를 읽어주고 설명하는 것은 자유입니다.
+- 생계 인출·세금·안전이 걸린 문제는 언제나 거절 없이 즉시 돕습니다.
 
 [봇 사용법]
 {guide}
+
+[현재 운용 상태]
+{status}
 
 [투자 규칙서]
 {rulebook}"""
 
 
+def _fmt_snapshot(raw: str | None) -> list[str]:
+    if not raw:
+        return ["- 확인된 잔고 없음(아직 판정 전) — 잔고 사진을 보내면 갱신됩니다."]
+    s = json.loads(raw)
+    lines = [f"- 마지막 확인 잔고({s['date']}, {s['kind']} 판정 시·주문 체결 전 기준):"]
+    holdings = [f"TQQQ {s['tqqq_shares']}주(@${s['tqqq_price']:,.2f})",
+                f"JEPI {s['jepi_shares']}주(@${s['jepi_price']:,.2f})"]
+    if s.get("sgov_shares"):
+        holdings.append(f"SGOV {s['sgov_shares']}주")
+    lines.append("  보유: " + " · ".join(holdings))
+    total_krw = s["total_usd"] * s["fx"]
+    lines.append(f"  평가액 합계 ${s['total_usd']:,.2f} (≈{total_krw:,.0f}원, 환율 {s['fx']:,.1f})"
+                 f" · TQQQ 비중 {s['tqqq_weight']:.1%}")
+    if s.get("cash_usd") is not None:
+        lines.append(f"  달러 예수금 ${s['cash_usd']:,.2f}")
+    pnl = {t: v for t, v in (s.get("pnl_krw") or {}).items() if v is not None}
+    if pnl:
+        lines.append("  평가손익: " + " · ".join(f"{t} {v:+,.0f}원" for t, v in pnl.items()))
+    lines.append(f"  당시 나스닥100 하락률 {s['drawdown']:.1%}")
+    return lines
+
+
+def _status_summary() -> str:
+    """대화 비서가 참조할 운용 상태 — DB 가 비어도 대화는 되도록 방어적으로 조립."""
+    try:
+        state = db.get_state()
+        lines = [f"- 단계: {state['phase']} · 적립일: "
+                 + (f"매월 {state['monthly_day']}일" if state["monthly_day"] else "미설정"),
+                 f"- 가속조항: 1단 {'발동됨' if state['tier1_fired'] else '미발동'}"
+                 f" / 2단 {'발동됨' if state['tier2_fired'] else '미발동'}"
+                 f" · 위기 모드: {'ON' if state['crisis_active'] else 'OFF'}"
+                 f" · 이월 잔돈 ${state['carry_usd']:,.2f}"]
+        lines += _fmt_snapshot(db.kv_get("last_snapshot"))
+        logs = db.recent_logs(8)
+        if logs:
+            lines.append("- 최근 판정 기록(최신순):")
+            lines += ["  " + db.format_log(r) for r in logs]
+        else:
+            lines.append("- 판정 기록 없음")
+        return "\n".join(lines)
+    except Exception as e:  # 상태 조회 실패가 대화 자체를 막지 않게
+        return f"(상태 조회 실패: {e})"
+
+
 def build_chat_system_prompt() -> str:
     with open(RULEBOOK_PATH, encoding="utf-8") as f:
         rulebook = f.read()
-    return CHAT_SYSTEM_TMPL.format(rulebook=rulebook, guide=BOT_GUIDE)
+    return CHAT_SYSTEM_TMPL.format(rulebook=rulebook, guide=BOT_GUIDE,
+                                   status=_status_summary())
 
 
 def answer_freeform(question: str) -> str:
-    """대화 세션을 유지하며 답변 — 세션 유실(컨테이너 교체 등) 시 새 대화로 폴백."""
+    """대화 세션을 유지하며 답변 — 세션 유실(컨테이너 교체 등) 시 새 대화로 폴백.
+    웹 검색을 허용해 뉴스·시장 정보 조사가 가능하다(가드레일이 매매 제안은 차단)."""
     system = build_chat_system_prompt()
     session_id = db.kv_get(_CHAT_SESSION_KEY)
+    tools = ("WebSearch", "WebFetch")
     try:
-        text, new_id = run_claude(question, system_prompt=system, resume=session_id,
-                                  timeout=300, return_session_id=True)
+        text, new_id = run_claude(question, allowed_tools=tools, system_prompt=system,
+                                  resume=session_id, timeout=600, return_session_id=True)
     except RuntimeError:
         if not session_id:
             raise
-        text, new_id = run_claude(question, system_prompt=system,
-                                  timeout=300, return_session_id=True)
+        text, new_id = run_claude(question, allowed_tools=tools, system_prompt=system,
+                                  timeout=600, return_session_id=True)
     if new_id:
         db.kv_set(_CHAT_SESSION_KEY, new_id)
     return text
