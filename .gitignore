@@ -33,7 +33,7 @@ Thumbs.db
 .vscode/
 *.swp
 
-# --- Runtime data (digests / scan results) ---
+# --- Runtime data (SQLite 상태·로그) ---
 data/
 *.sqlite
 *.sqlite3
@@ -41,9 +41,3 @@ data/
 *.db-wal
 *.db-shm
 *.log
-
-# --- Frontend (Node) ---
-node_modules/
-frontend/dist/
-frontend/node_modules/
-*.tsbuildinfo

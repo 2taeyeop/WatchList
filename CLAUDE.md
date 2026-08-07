@@ -5,14 +5,14 @@
 
 ## 프로젝트
 
-- **이름 / 설명**: WatchList — 투자 모니터링 파이프라인(개장 전 다이제스트 + 반등 스캐너)과 날짜별 뉴스·신호 대시보드.
-- **스택 / 런타임 버전**: Python 3.12 (anthropic·yfinance·pandas·FastAPI), SQLite, 프론트 Vite + React + TypeScript, 배포 Docker + nginx(EC2).
-- **로컬 경로**: 프론트 `frontend/` · 백엔드 `backend/`(FastAPI) + 루트 파이프라인(`digest.py`/`scanner.py`/`notify.py`).
+- **이름 / 설명**: WatchList — TQQQ/JEPI 규칙서 집행봇. 텔레그램으로 잔고 스크린샷을 받아 규칙서(`prompts/rulebook.md`)대로 판정·주문표·로그를 회신한다. 조언자가 아니라 집행자 — 뉴스·전망·추천은 금지된 입력.
+- **스택 / 런타임 버전**: Python 3.12 (requests·yfinance·pandas·pytest), SQLite, Claude Code CLI(`claude -p` 구독 인증 — 이미지에 node+claude 포함), 배포 EC2 공용 서버 Docker 컨테이너 1개(롱폴링 — 공개 포트 없음) + 리마인더는 호스트 cron.
+- **로컬 경로**: 백엔드 전부 `backend/` (봇 `bot.py` · 판정 엔진 `rules.py` · 리마인더 `jobs/reminder.py`), 규칙서 `prompts/`, 테스트 `tests/`.
 - **주요 명령어**:
-  - 설치: `pip install -r requirements.txt` · `cd frontend && npm install`
-  - 개발 서버: `uvicorn backend.api:app --reload` · `cd frontend && npm run dev`
-  - 빌드: `cd frontend && npm run build`
-  - 파이프라인: `python -m backend.jobs.digest` · `… scanner` · `… news_scan`
+  - 설치: `pip install -r requirements.txt`
+  - 테스트: `python -m pytest tests/ -q`
+  - 봇 실행: `python -m backend.bot` · 리마인더: `python -m backend.jobs.reminder`
+- **핵심 원칙**: 돈 계산(판정·주수)은 `rules.py` 순수 함수 + 유닛테스트로만. 클로드는 스크린샷 추출(`vision.py`)과 자유 질문(`reply.py`)에만 쓴다. 시장 데이터는 서버가 yfinance로 직접 조회(클로드 웹검색 의존 금지).
 
 ### 직접 실행하지 말 것
 
@@ -77,27 +77,28 @@
 
 ### 이 프로젝트의 구조
 
-| 위치                | 용도                                                                |
-| ------------------- | ------------------------------------------------------------------- |
-| `backend/jobs/`     | 파이프라인 배치 잡(`digest.py`·`scanner.py`·`news_scan.py`)         |
-| `backend/`          | SQLite 저장소(`db.py`) + FastAPI(`api.py`) + 발송 헬퍼(`notify.py`) |
-| `frontend/src/`     | Vite+React 대시보드 (기능 단위 co-locate)                           |
-| `frontend/src/api/` | 백엔드 통신 클라이언트                                              |
-| `deploy/`           | Dockerfile·docker-compose·nginx·systemd                             |
-| `docs/plans/`       | 작업 plan 문서                                                      |
-| `data/`             | SQLite 파일(런타임, .gitignore 제외)                                |
+| 위치              | 용도                                                                     |
+| ----------------- | ------------------------------------------------------------------------ |
+| `backend/`        | 봇(`bot.py`)·판정 엔진(`rules.py`)·시장 데이터(`market.py`)·추출(`vision.py`)·회신(`reply.py`)·저장소(`db.py`) |
+| `backend/jobs/`   | 배치 잡(`reminder.py` — 매일 아침 리마인더)                              |
+| `prompts/`        | 투자 규칙서(`rulebook.md`) — 개정 시 이 파일 갱신 = 봇 지식 갱신         |
+| `tests/`          | pytest 유닛·시나리오 테스트(돈 계산 검증)                                |
+| `deploy/`         | `Dockerfile` + `docker-compose.yml`(bot 컨테이너) — 리마인더는 호스트 cron |
+| `docs/plans/`     | 작업 plan 문서                                                           |
+| `data/`           | SQLite 파일(런타임, .gitignore 제외)                                     |
 
 ### 공용 자산 빠른 참조
 
 재구현 전에 먼저 여기부터 확인할 것:
 
-| 자산                              | 위치                   |
-| --------------------------------- | ---------------------- |
-| 신호등/지표 status → 색·라벨 매핑 | `frontend/src/shared/` |
-| 날짜/통화 포매터                  | `frontend/src/shared/` |
-| API 클라이언트(fetch 래퍼·타입)   | `frontend/src/api/`    |
-| DB 스키마·저장/조회 헬퍼          | `backend/db.py`        |
-| 텔레그램/디스코드 발송            | `backend/notify.py`    |
+| 자산                                   | 위치                       |
+| -------------------------------------- | -------------------------- |
+| 판정·주수 계산(순수 함수·규칙 상수)    | `backend/rules.py`         |
+| DB 스키마·state/로그/pending 헬퍼      | `backend/db.py`            |
+| 텔레그램 Bot API 클라이언트            | `backend/notify.py`        |
+| claude -p 헤드리스 호출(구독 인증 강제) | `backend/claude_runner.py` |
+| 시장 데이터(^NDX·현재가·환율)          | `backend/market.py`        |
+| 회신 포맷·위기 배너·가드레일 프롬프트  | `backend/reply.py`         |
 
 ## 외부 계약은 추측하지 말고 검증
 

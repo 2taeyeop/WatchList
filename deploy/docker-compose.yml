@@ -1,24 +1,16 @@
-# EC2 단일 호스트 배포. 레포 루트에서: docker compose -f deploy/docker-compose.yml up -d --build
-# 키는 레포 루트의 .env(env_file, 커밋 금지)로 주입.
+# 사용: docker compose -f deploy/docker-compose.yml up -d --build
+# 리마인더(매일 아침 1회)는 호스트 crontab 으로 실행 — README 참조:
+#   0 23 * * * docker compose -f <repo>/deploy/docker-compose.yml run --rm bot python -m backend.jobs.reminder
 services:
-  api:
+  bot:
     build:
       context: ..
-      dockerfile: deploy/Dockerfile.api
-    image: watchlist-api
-    env_file: [../.env] # TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID (컨테이너의 scanner 발송용)
+      dockerfile: deploy/Dockerfile
+    container_name: watchlist-bot
+    env_file: ../.env                    # TELEGRAM_*·CLAUDE_CODE_OAUTH_TOKEN(컨테이너 필수)
     environment:
-      - WATCHLIST_DB=/app/data/watchlist.db
+      WATCHLIST_DB: /app/data/watchlist.db
     volumes:
-      - ../data:/app/data # SQLite 파일을 호스트와 공유(스케줄러 배치도 같은 파일 사용)
+      - ../data:/app/data                # SQLite(state·로그)를 호스트에 보존
     restart: unless-stopped
-
-  web:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.web
-    image: watchlist-web
-    ports:
-      - "8080:80" # 호스트 nginx 가 watch.<도메인> → 127.0.0.1:8080 으로 프록시
-    depends_on: [api]
-    restart: unless-stopped
+    # ports 없음 — 롱폴링이라 노출 엔드포인트 0개(작업지시 7절)

@@ -1,9 +1,0 @@
-[Unit]
-Description=WatchList 반등 스캐너 (yfinance 스크리닝 + 트리거형 Telegram + DB 저장)
-After=docker.service network-online.target
-Requires=docker.service
-
-[Service]
-Type=oneshot
-WorkingDirectory=/opt/watchlist
-ExecStart=/usr/bin/docker compose -f deploy/docker-compose.yml run --rm api python -m backend.jobs.scanner

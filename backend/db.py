@@ -1,30 +1,29 @@
-"""SQLite 저장소 — 다이제스트/스캔 결과를 날짜별로 보관.
+"""SQLite 저장소 — 봇 상태(state 1행) + 기록 로그(append-only) + 확인 게이트(pending).
 
-- 파이프라인(digest.py / scanner.py)이 결과를 여기에 저장하고,
-- FastAPI(api.py)가 같은 파일을 읽어 프론트로 제공합니다.
-
-DB 파일 경로는 환경변수 WATCHLIST_DB 로 바꿀 수 있고, 기본값은 data/watchlist.db
-(data/ 는 .gitignore 로 커밋 제외). 동시 읽기/간헐적 쓰기에 안전하도록 WAL 모드.
+경로는 WATCHLIST_DB 환경변수(기본 data/watchlist.db). 날짜 기준은 KST —
+적립일·리마인더·로그가 전부 사용자(한국) 생활 시간에 묶이기 때문.
 """
 import json
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
 
-_DEFAULT_PATH = os.path.join("data", "watchlist.db")
-_ET = ZoneInfo("America/New_York")
+_KST = timezone(timedelta(hours=9))
+
+STATE_COLUMNS = {
+    "phase", "entry_week", "monthly_day", "episode_active",
+    "tier1_fired", "tier2_fired", "skip_december_year", "carry_usd", "crisis_active",
+}
+_BOOL_COLUMNS = {"episode_active", "tier1_fired", "tier2_fired", "crisis_active"}
 
 
 def db_path() -> str:
-    return os.environ.get("WATCHLIST_DB", _DEFAULT_PATH)
+    return os.environ.get("WATCHLIST_DB", os.path.join("data", "watchlist.db"))
 
 
-def trading_day() -> str:
-    """미국 동부 기준 오늘 날짜(YYYY-MM-DD). 다이제스트는 개장 전, 스캐너는
-    마감 후 실행되므로 둘 다 '그날 ET 날짜'로 묶입니다."""
-    return datetime.now(_ET).strftime("%Y-%m-%d")
+def today_kst() -> str:
+    return datetime.now(_KST).strftime("%Y-%m-%d")
 
 
 def _now_utc() -> str:
@@ -52,339 +51,109 @@ def init_db() -> None:
     with connect() as conn:
         conn.executescript(
             """
-            CREATE TABLE IF NOT EXISTS digests (
-                date         TEXT PRIMARY KEY,   -- YYYY-MM-DD (ET 거래일)
-                created_at   TEXT NOT NULL,      -- 저장 시각(UTC ISO)
-                prose        TEXT NOT NULL,      -- 한국어 다이제스트 전문
-                signal_light TEXT,               -- 'green' | 'yellow' | 'red' | 'unknown'
-                indicators   TEXT,               -- JSON 배열 [{name,status,value,change,comment,source}]
-                conclusion   TEXT                -- 한 줄 결론
+            CREATE TABLE IF NOT EXISTS state (
+                id                 INTEGER PRIMARY KEY CHECK (id = 1),
+                phase              TEXT NOT NULL DEFAULT 'SETUP',  -- SETUP | ENTRY | STEADY
+                entry_week         INTEGER NOT NULL DEFAULT 1,     -- 진입기 주차(1~5)
+                monthly_day        INTEGER,                        -- 적립일(일). NULL=미설정
+                episode_active     INTEGER NOT NULL DEFAULT 0,     -- 가속 에피소드 진행 중
+                tier1_fired        INTEGER NOT NULL DEFAULT 0,
+                tier2_fired        INTEGER NOT NULL DEFAULT 0,
+                skip_december_year INTEGER,                        -- 가속 발동 연도(그해 12월 스킵)
+                carry_usd          REAL NOT NULL DEFAULT 0,        -- 이월 잔돈($) 장부값
+                crisis_active      INTEGER NOT NULL DEFAULT 0      -- 위기 모드(히스테리시스)
             );
-            CREATE TABLE IF NOT EXISTS scans (
+            CREATE TABLE IF NOT EXISTS logs (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                date       TEXT NOT NULL,        -- YYYY-MM-DD (ET 거래일)
                 created_at TEXT NOT NULL,
-                ticker     TEXT NOT NULL,
-                price      REAL,
-                change_pct REAL,
-                reasons    TEXT,                 -- JSON 배열(반등 사유)
-                UNIQUE(date, ticker)
+                date       TEXT NOT NULL,   -- YYYY-MM-DD (KST)
+                action     TEXT NOT NULL,
+                drawdown   TEXT NOT NULL,   -- 표시용 문자열(예: -12.3%)
+                weights    TEXT NOT NULL,   -- 비중 전→후(예: 68.2%→70.1%)
+                memo       TEXT NOT NULL DEFAULT ''
             );
-            CREATE INDEX IF NOT EXISTS idx_scans_date ON scans(date);
-            CREATE TABLE IF NOT EXISTS news_scans (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                date       TEXT NOT NULL,        -- YYYY-MM-DD (ET 거래일)
+            CREATE TABLE IF NOT EXISTS pending (
+                id         INTEGER PRIMARY KEY CHECK (id = 1),
                 created_at TEXT NOT NULL,
-                ticker     TEXT NOT NULL,
-                change_pct REAL,                 -- 전일 하락률
-                catalyst   TEXT,                 -- 호재 요약
-                view       TEXT,                 -- 반등 관점
-                confidence TEXT,                 -- high | medium | low
-                sources    TEXT,                 -- JSON 배열(출처 URL)
-                UNIQUE(date, ticker)
+                kind       TEXT NOT NULL,   -- monthly | entry | december | withdraw
+                payload    TEXT NOT NULL    -- 추출값+시장값 JSON(확인 게이트 통과 전)
             );
-            CREATE INDEX IF NOT EXISTS idx_news_scans_date ON news_scans(date);
-            CREATE TABLE IF NOT EXISTS holdings_news (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                date       TEXT NOT NULL,        -- YYYY-MM-DD (ET 거래일)
-                created_at TEXT NOT NULL,
-                ticker     TEXT NOT NULL,        -- 내 ETF 구성종목
-                sentiment  TEXT,                 -- positive | neutral | negative
-                headline   TEXT,                 -- 최신 핵심 뉴스 한 줄
-                source     TEXT,                 -- 출처 URL
-                UNIQUE(date, ticker)
-            );
-            CREATE INDEX IF NOT EXISTS idx_holdings_news_date ON holdings_news(date);
-            CREATE TABLE IF NOT EXISTS searches (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                ticker     TEXT NOT NULL,        -- 심볼(US) 또는 6자리코드(KR)
-                date       TEXT NOT NULL,        -- 분석 날짜(YYYY-MM-DD)
-                created_at TEXT NOT NULL,
-                name       TEXT,                 -- 정식 종목명
-                market     TEXT,                 -- KR | US
-                price      REAL,
-                change_pct REAL,
-                summary    TEXT,                 -- 핵심 요약
-                catalyst   TEXT,                 -- 호재/촉매
-                view       TEXT,                 -- 단기 관점
-                sentiment  TEXT,                 -- positive | neutral | negative
-                sources    TEXT,                 -- JSON 배열(출처 URL)
-                UNIQUE(ticker, date)             -- 같은 날 재검색 시 갱신
-            );
-            CREATE INDEX IF NOT EXISTS idx_searches_ticker ON searches(ticker);
-            CREATE TABLE IF NOT EXISTS buys (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                date       TEXT NOT NULL,        -- YYYY-MM-DD (ET 거래일)
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                ticker     TEXT NOT NULL,        -- SMH | QLD | SSO
-                amount     REAL,                 -- 그날 매수 금액(USD)
-                price      REAL,                 -- 매수단가(종가) — buy_fill 잡이 채움
-                bought     INTEGER DEFAULT 0,    -- 구입(1)/미구입(0)
-                UNIQUE(date, ticker)
-            );
-            CREATE INDEX IF NOT EXISTS idx_buys_date ON buys(date);
             """
         )
+        conn.execute("INSERT OR IGNORE INTO state (id) VALUES (1)")
 
 
-# ---------- 쓰기 ----------
-def save_digest(prose: str, signal_light: str = "unknown",
-                indicators: list | None = None, conclusion: str = "",
-                date: str | None = None) -> str:
-    date = date or trading_day()
+# ---------- 상태 ----------
+def get_state() -> dict:
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM state WHERE id=1").fetchone()
+    state = dict(row)
+    for col in _BOOL_COLUMNS:
+        state[col] = bool(state[col])
+    return state
+
+
+def update_state(**kwargs) -> None:
+    unknown = set(kwargs) - STATE_COLUMNS
+    if unknown:
+        raise ValueError(f"알 수 없는 state 컬럼: {unknown}")
+    if not kwargs:
+        return
+    cols = ", ".join(f"{k}=?" for k in kwargs)
+    values = [int(v) if isinstance(v, bool) else v for v in kwargs.values()]
+    with connect() as conn:
+        conn.execute(f"UPDATE state SET {cols} WHERE id=1", values)
+
+
+# ---------- 기록 로그 (append-only) ----------
+def append_log(action: str, drawdown: str, weights: str, memo: str = "",
+               date: str | None = None) -> dict:
+    row = {"created_at": _now_utc(), "date": date or today_kst(),
+           "action": action, "drawdown": drawdown, "weights": weights, "memo": memo}
     with connect() as conn:
         conn.execute(
-            """INSERT INTO digests (date, created_at, prose, signal_light, indicators, conclusion)
-               VALUES (?,?,?,?,?,?)
-               ON CONFLICT(date) DO UPDATE SET
-                 created_at=excluded.created_at, prose=excluded.prose,
-                 signal_light=excluded.signal_light, indicators=excluded.indicators,
-                 conclusion=excluded.conclusion""",
-            (date, _now_utc(), prose, signal_light,
-             json.dumps(indicators or [], ensure_ascii=False), conclusion),
-        )
-    return date
+            "INSERT INTO logs (created_at, date, action, drawdown, weights, memo) "
+            "VALUES (:created_at, :date, :action, :drawdown, :weights, :memo)", row)
+    return row
 
 
-def save_scans(hits: list[tuple], date: str | None = None) -> str:
-    """hits: scanner.scan_one 의 (ticker, price, chg, reasons) 튜플 리스트."""
-    date = date or trading_day()
-    now = _now_utc()
-    with connect() as conn:
-        conn.execute("DELETE FROM scans WHERE date=?", (date,))  # 그날 결과 갱신
-        conn.executemany(
-            """INSERT INTO scans (date, created_at, ticker, price, change_pct, reasons)
-               VALUES (?,?,?,?,?,?)""",
-            [(date, now, t, float(p), float(c), json.dumps(r, ensure_ascii=False))
-             for (t, p, c, r) in hits],
-        )
-    return date
-
-
-# ---------- 읽기 ----------
-def _digest_row(row: sqlite3.Row) -> dict:
-    return {
-        "date": row["date"],
-        "created_at": row["created_at"],
-        "prose": row["prose"],
-        "signal_light": row["signal_light"],
-        "indicators": json.loads(row["indicators"] or "[]"),
-        "conclusion": row["conclusion"],
-    }
-
-
-def list_dates() -> list[dict]:
-    """달력/사이드바용 — 날짜 + 신호등 + 스캔 후보 수."""
+def recent_logs(limit: int = 10) -> list[dict]:
     with connect() as conn:
         rows = conn.execute(
-            """SELECT d.date AS date, d.signal_light AS signal_light,
-                      (SELECT COUNT(*) FROM scans s WHERE s.date = d.date) AS scan_count
-               FROM digests d ORDER BY d.date DESC"""
-        ).fetchall()
-        # 다이제스트는 없고 스캔만 있는 날짜도 포함
-        scan_only = conn.execute(
-            """SELECT date, NULL AS signal_light, COUNT(*) AS scan_count
-               FROM scans WHERE date NOT IN (SELECT date FROM digests)
-               GROUP BY date ORDER BY date DESC"""
-        ).fetchall()
-    out = [dict(r) for r in rows] + [dict(r) for r in scan_only]
-    out.sort(key=lambda x: x["date"], reverse=True)
-    return out
+            "SELECT * FROM logs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return [dict(r) for r in rows]
 
 
-def get_digest(date: str) -> dict | None:
-    with connect() as conn:
-        row = conn.execute("SELECT * FROM digests WHERE date=?", (date,)).fetchone()
-    return _digest_row(row) if row else None
+def format_log(row: dict) -> str:
+    return f"{row['date']} | {row['action']} | {row['drawdown']} | {row['weights']} | {row['memo']}"
 
 
-def latest_digest() -> dict | None:
-    with connect() as conn:
-        row = conn.execute(
-            "SELECT * FROM digests ORDER BY date DESC LIMIT 1").fetchone()
-    return _digest_row(row) if row else None
-
-
-def get_scans(date: str) -> list[dict]:
-    with connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM scans WHERE date=? ORDER BY ticker", (date,)).fetchall()
-    return [{
-        "ticker": r["ticker"], "price": r["price"], "change_pct": r["change_pct"],
-        "reasons": json.loads(r["reasons"] or "[]"),
-    } for r in rows]
-
-
-# ---------- 뉴스 반등 후보 ----------
-def save_news_scans(items: list[dict], date: str | None = None) -> str:
-    """items: [{ticker, change_pct, catalyst, view, confidence, sources}]."""
-    date = date or trading_day()
-    now = _now_utc()
-    with connect() as conn:
-        conn.execute("DELETE FROM news_scans WHERE date=?", (date,))
-        conn.executemany(
-            """INSERT OR REPLACE INTO news_scans
-                 (date, created_at, ticker, change_pct, catalyst, view, confidence, sources)
-               VALUES (?,?,?,?,?,?,?,?)""",
-            [(date, now, it["ticker"], float(it.get("change_pct") or 0),
-              it.get("catalyst", ""), it.get("view", ""), it.get("confidence", ""),
-              json.dumps(it.get("sources", []), ensure_ascii=False))
-             for it in items],
-        )
-    return date
-
-
-def get_news_scans(date: str) -> list[dict]:
-    with connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM news_scans WHERE date=? ORDER BY ticker", (date,)).fetchall()
-    return [{
-        "ticker": r["ticker"], "change_pct": r["change_pct"],
-        "catalyst": r["catalyst"], "view": r["view"], "confidence": r["confidence"],
-        "sources": json.loads(r["sources"] or "[]"),
-    } for r in rows]
-
-
-# ---------- 보유 ETF 구성종목 최신 뉴스(양방향) ----------
-def save_holdings_news(items: list[dict], date: str | None = None) -> str:
-    """items: [{ticker, sentiment, headline, source}]. 그날 결과를 통째로 갱신."""
-    date = date or trading_day()
-    now = _now_utc()
-    with connect() as conn:
-        conn.execute("DELETE FROM holdings_news WHERE date=?", (date,))
-        conn.executemany(
-            """INSERT OR REPLACE INTO holdings_news
-                 (date, created_at, ticker, sentiment, headline, source)
-               VALUES (?,?,?,?,?,?)""",
-            [(date, now, it["ticker"], it.get("sentiment", "neutral"),
-              it.get("headline", ""), it.get("source", ""))
-             for it in items],
-        )
-    return date
-
-
-def get_holdings_news(date: str) -> list[dict]:
-    with connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM holdings_news WHERE date=? ORDER BY ticker", (date,)).fetchall()
-    return [{
-        "ticker": r["ticker"], "sentiment": r["sentiment"],
-        "headline": r["headline"], "source": r["source"],
-    } for r in rows]
-
-
-# ---------- 검색 분석(티커별·날짜별 누적) ----------
-def _search_row(row: sqlite3.Row) -> dict:
-    return {
-        "ticker": row["ticker"], "date": row["date"], "created_at": row["created_at"],
-        "name": row["name"], "market": row["market"], "price": row["price"],
-        "change_pct": row["change_pct"], "summary": row["summary"],
-        "catalyst": row["catalyst"], "view": row["view"], "sentiment": row["sentiment"],
-        "sources": json.loads(row["sources"] or "[]"),
-    }
-
-
-def save_search(ticker: str, name: str = "", market: str = "",
-                price: float | None = None, change_pct: float | None = None,
-                summary: str = "", catalyst: str = "", view: str = "",
-                sentiment: str = "neutral", sources: list | None = None,
-                date: str | None = None) -> str:
-    """검색 분석 1건 저장(같은 날·종목은 갱신, 날짜가 다르면 누적)."""
-    date = date or trading_day()
+# ---------- 확인 게이트 ----------
+def set_pending(kind: str, payload: dict) -> None:
     with connect() as conn:
         conn.execute(
-            """INSERT INTO searches
-                 (ticker, date, created_at, name, market, price, change_pct,
-                  summary, catalyst, view, sentiment, sources)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-               ON CONFLICT(ticker, date) DO UPDATE SET
-                 created_at=excluded.created_at, name=excluded.name, market=excluded.market,
-                 price=excluded.price, change_pct=excluded.change_pct, summary=excluded.summary,
-                 catalyst=excluded.catalyst, view=excluded.view, sentiment=excluded.sentiment,
-                 sources=excluded.sources""",
-            (ticker, date, _now_utc(), name, market, price, change_pct,
-             summary, catalyst, view, sentiment,
-             json.dumps(sources or [], ensure_ascii=False)),
-        )
-    return date
+            "INSERT OR REPLACE INTO pending (id, created_at, kind, payload) VALUES (1, ?, ?, ?)",
+            (_now_utc(), kind, json.dumps(payload, ensure_ascii=False)))
 
 
-def get_searches(ticker: str) -> list[dict]:
-    """한 종목의 분석 이력(최신 날짜 순)."""
+def get_pending() -> tuple[str, dict] | None:
+    """삭제 없이 조회(peek) — 회신 전송 성공 후에만 지우는 커밋 순서를 위해."""
     with connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM searches WHERE ticker=? ORDER BY date DESC", (ticker,)).fetchall()
-    return [_search_row(r) for r in rows]
+        row = conn.execute("SELECT * FROM pending WHERE id=1").fetchone()
+    if row is None:
+        return None
+    return row["kind"], json.loads(row["payload"])
 
 
-def list_searches() -> list[dict]:
-    """저장된 모든 분석(티커·날짜 순) — '저장된 데이터 보기'에서 티커별 그룹핑."""
+def pop_pending() -> tuple[str, dict] | None:
     with connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM searches ORDER BY ticker, date DESC").fetchall()
-    return [_search_row(r) for r in rows]
+        row = conn.execute("SELECT * FROM pending WHERE id=1").fetchone()
+        if row is None:
+            return None
+        conn.execute("DELETE FROM pending WHERE id=1")
+    return row["kind"], json.loads(row["payload"])
 
 
-# ---------- 분할매수 추적 ----------
-def _buy_row(row: sqlite3.Row) -> dict:
-    return {
-        "date": row["date"], "ticker": row["ticker"], "amount": row["amount"],
-        "price": row["price"], "bought": bool(row["bought"]),
-    }
-
-
-def record_buy(ticker: str, amount: float, bought: bool = True,
-               date: str | None = None, price: float | None = None) -> str:
-    """그날·종목 매수 기록(구입/미구입 + 매수단가). price 를 주면 그 값으로,
-    안 주면 기존 price 유지(buy_fill 잡이 종가로 채울 수 있게)."""
-    date = date or trading_day()
-    now = _now_utc()
+def clear_pending() -> None:
     with connect() as conn:
-        conn.execute(
-            """INSERT INTO buys (date, created_at, updated_at, ticker, amount, bought, price)
-               VALUES (?,?,?,?,?,?,?)
-               ON CONFLICT(date, ticker) DO UPDATE SET
-                 updated_at=excluded.updated_at, amount=excluded.amount,
-                 bought=excluded.bought,
-                 price=COALESCE(excluded.price, buys.price)""",
-            (date, now, now, ticker, float(amount), int(bool(bought)),
-             None if price is None else float(price)),
-        )
-    return date
-
-
-def get_buys(date: str) -> list[dict]:
-    """그날 매수 기록(캘린더용)."""
-    with connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM buys WHERE date=? ORDER BY ticker", (date,)).fetchall()
-    return [_buy_row(r) for r in rows]
-
-
-def list_buys(ticker: str | None = None) -> list[dict]:
-    """그래프/누적용 — 전체(또는 종목별) 매수를 날짜 오름차순으로."""
-    with connect() as conn:
-        if ticker:
-            rows = conn.execute(
-                "SELECT * FROM buys WHERE ticker=? ORDER BY date", (ticker,)).fetchall()
-        else:
-            rows = conn.execute("SELECT * FROM buys ORDER BY date, ticker").fetchall()
-    return [_buy_row(r) for r in rows]
-
-
-def fill_buy_price(date: str, ticker: str, price: float) -> None:
-    """buy_fill 잡 — 마감 후 종가를 매수단가로 채움."""
-    with connect() as conn:
-        conn.execute(
-            "UPDATE buys SET price=?, updated_at=? WHERE date=? AND ticker=?",
-            (float(price), _now_utc(), date, ticker),
-        )
-
-
-def buys_missing_price() -> list[dict]:
-    """종가 미채움(구입했는데 price NULL) — buy_fill 대상."""
-    with connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM buys WHERE bought=1 AND price IS NULL ORDER BY date").fetchall()
-    return [_buy_row(r) for r in rows]
+        conn.execute("DELETE FROM pending WHERE id=1")
