@@ -17,12 +17,9 @@ jobs:
       - run: python -m pytest tests/ -q
 
   docker:
-    # 배포 브랜치 push 에서만 발행 — 시크릿 DOCKERHUB_USERNAME·DOCKERHUB_TOKEN 필요
+    # main 머지(push)에서만 이미지 발행 — 시크릿 DOCKERHUB_USERNAME·DOCKERHUB_TOKEN 필요
     needs: test
-    if: >
-      github.event_name == 'push' &&
-      (github.ref_name == 'feat/telegram-rulebot' ||
-       github.ref_name == github.event.repository.default_branch)
+    if: github.event_name == 'push' && github.ref_name == 'main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
