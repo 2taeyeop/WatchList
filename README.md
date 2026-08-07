@@ -57,14 +57,19 @@ WatchList/
 ├─ prompts/rulebook.md  ← 투자 규칙서(개정 시 이 파일 갱신 = 봇 지식 갱신)
 ├─ tests/               ← 유닛·시나리오 테스트(pytest)
 ├─ deploy/              ← Dockerfile + compose(로컬 빌드용 / 서버 pull용 .server.yml)
-├─ .github/workflows/ci.yml ← 테스트 CI(잡 실행·배포 없음)
+├─ .github/workflows/ci.yml ← CI/CD(전 브랜치 테스트 + main 머지 시 이미지 발행)
 └─ data/                ← SQLite 파일(런타임 생성, 커밋 제외)
 ```
 
 ## 배포 (EC2 — Docker Hub pull, 리포 clone 불필요)
 
-CI(ci.yml)가 배포 브랜치 push 시 테스트 통과 후 `watchlist-bot` 이미지를 Docker Hub 로
-발행합니다 (GitHub Secrets: `DOCKERHUB_USERNAME`·`DOCKERHUB_TOKEN` 필요).
+```
+작업 브랜치 커밋 → main 머지 → CI: pytest → 통과 시 watchlist-bot:latest·:sha 발행
+→ 서버: docker compose pull && docker compose up -d
+```
+
+이미지 발행은 **main 머지(push)에서만** 실행됩니다 (GitHub Secrets:
+`DOCKERHUB_USERNAME`·`DOCKERHUB_TOKEN` 필요). 다른 브랜치 push 는 테스트만 돕니다.
 
 ```bash
 # 서버 최초 1회 셋업
