@@ -1,4 +1,4 @@
-"""자유 대화 프롬프트·세션 테스트 — 비서가 명령어·현황·기록을 알고 대화를 이어가야 한다."""
+"""자유 대화 프롬프트·기억 테스트 — 비서가 채팅방의 모든 내용을 알아야 한다."""
 import json
 
 import pytest
@@ -48,11 +48,57 @@ def test_chat_system_prompt_contains_status(db):
     assert "월간적립 TQQQ 14주" in prompt  # 최근 기록 주입
 
 
+def test_chat_system_prompt_contains_full_transcript(db):
+    """채팅방의 모든 내용(명령·봇 회신·사진·잡담)이 비서 프롬프트에 들어가야 한다."""
+    from backend.reply import build_chat_system_prompt
+    db.chat_append("user", "/setday 25")
+    db.chat_append("bot", "적립일을 매월 25일로 설정했습니다.")
+    db.chat_append("user", "[잔고 스크린샷 전송]")
+    db.chat_append("bot", "① 판정: 월간적립 TQQQ 14주 ...")
+    db.chat_append("user", "고마워 ㅋㅋ")
+
+    prompt = build_chat_system_prompt()
+    assert "[채팅방 대화 기록" in prompt
+    assert "/setday 25" in prompt
+    assert "적립일을 매월 25일로 설정했습니다." in prompt
+    assert "[잔고 스크린샷 전송]" in prompt
+    assert "월간적립 TQQQ 14주" in prompt
+    assert "고마워 ㅋㅋ" in prompt
+
+
+def test_transcript_dedupes_current_question(db):
+    from backend.reply import _format_transcript
+    db.chat_append("user", "가속조항이 뭐야?")
+    text = _format_transcript(current_question="가속조항이 뭐야?")
+    # 방금 받은 질문은 -p 프롬프트로 전달되므로 기록에서 중복 제거
+    assert "가속조항이 뭐야?" not in text
+
+
+def test_transcript_truncates_by_chars(db):
+    from backend.reply import _format_transcript
+    for i in range(50):
+        db.chat_append("user", f"메시지-{i} " + "x" * 2000)
+    text = _format_transcript()
+    assert "생략" in text
+    assert "메시지-49" in text      # 최신은 보존
+    assert "메시지-0 " not in text  # 오래된 것은 탈락
+
+
+def test_chat_clear_resets_memory(db):
+    from backend import reply
+    db.chat_append("user", "기억해줘")
+    assert db.chat_history()[0]
+    reply.reset_chat_session()  # /newchat 경로
+    rows, truncated = db.chat_history()
+    assert rows == [] and truncated is False
+
+
 def test_chat_system_prompt_survives_empty_db(db):
     from backend.reply import build_chat_system_prompt
-    prompt = build_chat_system_prompt()  # 스냅샷·로그 없음
+    prompt = build_chat_system_prompt()  # 스냅샷·로그·대화 없음
     assert "확인된 잔고 없음" in prompt
     assert "판정 기록 없음" in prompt
+    assert "기록 없음 — 새 대화" in prompt
 
 
 def test_usage_and_guide_cover_same_commands():
@@ -63,24 +109,13 @@ def test_usage_and_guide_cover_same_commands():
         assert cmd in BOT_GUIDE
 
 
-def test_build_cmd_resume_and_system_prompt():
-    cmd = build_cmd("질문", system_prompt="시스템", resume="sess-123")
+def test_build_cmd_system_prompt():
+    cmd = build_cmd("질문", system_prompt="시스템")
     assert cmd[1:3] == ["-p", "질문"]
     assert "--append-system-prompt" in cmd and "시스템" in cmd
-    assert "--resume" in cmd
-    assert cmd[cmd.index("--resume") + 1] == "sess-123"
 
 
-def test_build_cmd_without_session_flags():
+def test_build_cmd_minimal():
     cmd = build_cmd("질문")
-    assert "--resume" not in cmd
     assert "--append-system-prompt" not in cmd
-
-
-def test_chat_session_roundtrip(db):
-    from backend import reply
-    assert db.kv_get("chat_session_id") is None
-    db.kv_set("chat_session_id", "sess-abc")
-    assert db.kv_get("chat_session_id") == "sess-abc"
-    reply.reset_chat_session()  # /newchat 경로
-    assert db.kv_get("chat_session_id") is None
+    assert "--allowedTools" not in cmd

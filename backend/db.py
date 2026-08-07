@@ -79,8 +79,14 @@ def init_db() -> None:
                 payload    TEXT NOT NULL    -- 추출값+시장값 JSON(확인 게이트 통과 전)
             );
             CREATE TABLE IF NOT EXISTS kv (
-                key   TEXT PRIMARY KEY,     -- 예: chat_session_id(자유 질문 대화 세션)
+                key   TEXT PRIMARY KEY,     -- 예: last_snapshot(마지막 확인 잔고)
                 value TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS chat_log (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,   -- UTC ISO
+                role       TEXT NOT NULL,   -- user | bot
+                content    TEXT NOT NULL    -- 채팅방에 오간 메시지 전문(명령·회신·사진 알림 포함)
             );
             """
         )
@@ -147,6 +153,35 @@ def kv_set(key: str, value: str) -> None:
 def kv_delete(key: str) -> None:
     with connect() as conn:
         conn.execute("DELETE FROM kv WHERE key=?", (key,))
+
+
+# ---------- 채팅방 대화 기록 (비서의 기억 — /newchat 으로 초기화) ----------
+def chat_append(role: str, content: str) -> None:
+    with connect() as conn:
+        conn.execute("INSERT INTO chat_log (created_at, role, content) VALUES (?, ?, ?)",
+                     (_now_utc(), role, content))
+
+
+def chat_history(max_chars: int = 40_000) -> tuple[list[dict], bool]:
+    """최신부터 거슬러 max_chars 이내의 기록을 (시간순, 잘림 여부)로 반환.
+    비서 프롬프트에 통째로 들어가므로 상한으로 폭주를 막는다."""
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM chat_log ORDER BY id DESC").fetchall()
+    picked, total = [], 0
+    truncated = False
+    for r in rows:
+        total += len(r["content"])
+        if picked and total > max_chars:
+            truncated = True
+            break
+        picked.append(dict(r))
+    picked.reverse()
+    return picked, truncated
+
+
+def chat_clear() -> None:
+    with connect() as conn:
+        conn.execute("DELETE FROM chat_log")
 
 
 # ---------- 확인 게이트 ----------

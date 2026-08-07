@@ -29,11 +29,22 @@ _KIND_KR = {"monthly": "월간 루틴", "entry": "진입기 주간", "december":
 _session = {"next_kind": "monthly", "args": {}, "await_input": None}
 
 
-def _send(text: str, reply_markup: dict | None = None) -> None:
-    """공통 발신 — 위기 모드면 모든 회신 상단에 고정 문구(작업지시 5절)."""
+def _remember(role: str, content: str) -> None:
+    """채팅방 기록(비서의 기억) 적재 — 실패해도 봇 동작은 계속."""
+    try:
+        db.chat_append(role, content)
+    except Exception as e:
+        print(f"채팅 기록 실패(무시): {e}")
+
+
+def _send(text: str, reply_markup: dict | None = None, record: bool = True) -> None:
+    """공통 발신 — 위기 모드면 모든 회신 상단에 고정 문구(작업지시 5절).
+    record=False 는 '확인 중…' 같은 일시 안내(기억에 남길 가치 없는 것)에만 쓴다."""
     if db.get_state()["crisis_active"]:
         text = reply_mod.CRISIS_BANNER + "\n\n" + text
     notify.send(text, reply_markup=reply_markup)
+    if record:
+        _remember("bot", text)
 
 
 def _reset_session() -> None:
@@ -53,11 +64,13 @@ def handle_update(u: dict) -> None:
     if not msg or str(msg["chat"]["id"]) != notify.owner_chat_id():
         return
     if "photo" in msg:
+        _remember("user", "[잔고 스크린샷 전송]")
         handle_photo(msg)
         return
     text = (msg.get("text") or "").strip()
     if not text:
         return
+    _remember("user", text)
     if text.startswith("/"):
         handle_command(text)
     else:
@@ -93,7 +106,8 @@ def handle_command(text: str) -> None:
         _send("\n".join(db.format_log(r) for r in logs) if logs else "기록이 없습니다.")
     elif cmd == "/newchat":
         reply_mod.reset_chat_session()
-        _send("대화를 초기화했습니다. 다음 질문부터 새 대화로 시작합니다.")
+        _send("비서의 기억(채팅방 기록)을 초기화했습니다. 이 시점 이전의 대화·명령·판정 "
+              "내용은 더 이상 기억하지 않습니다.")
     elif cmd == "/setday":
         day = int(args[0]) if args and args[0].isdigit() else None
         if day is None or not 1 <= day <= 31:
@@ -136,8 +150,8 @@ def handle_text(text: str) -> None:
         _session["await_input"] = None
         _send(f"실현손익 {krw:+,.0f}원 확인. 이제 잔고 스크린샷을 보내주세요.")
         return
-    # 자유 대화 — 개인 비서(규칙서·현황·웹검색 지식원, 집행 가드레일 유지)
-    _send("확인 중입니다… (수십 초)")
+    # 자유 대화 — 개인 비서(규칙서·현황·채팅방 기록·웹검색 지식원, 집행 가드레일 유지)
+    _send("확인 중입니다… (수십 초)", record=False)
     _send(reply_mod.answer_freeform(text))
 
 
@@ -153,7 +167,7 @@ def handle_photo(msg: dict) -> None:
         _send("/december 는 실현손익 합계 입력이 먼저입니다. /december 를 다시 실행해주세요.")
         return
 
-    _send("스크린샷에서 수치를 추출하는 중입니다… (수십 초)")
+    _send("스크린샷에서 수치를 추출하는 중입니다… (수십 초)", record=False)
     tmp_dir = tempfile.mkdtemp(prefix="rulebot_")
     try:
         path = notify.download_photo(msg["photo"][-1]["file_id"], tmp_dir)
@@ -230,11 +244,13 @@ def handle_callback(cb: dict) -> None:
         _send("이 확인 건은 만료되었습니다. 최신 게이트 메시지의 버튼을 사용해주세요.")
         return
     if action == "retry":
+        _remember("user", "[게이트 버튼: ❌ 다시]")
         db.clear_pending()
         _send("취소했습니다. 다시 촬영해 보내주세요.")
         return
     if action != "confirm":
         return
+    _remember("user", "[게이트 버튼: ✅ 맞음]")
 
     result = compute_judgment(kind, payload)
     # 전송 성공을 커밋의 선행 조건으로 — 전송 실패 시 pending 이 남아 같은 ✅ 로
