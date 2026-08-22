@@ -42,9 +42,12 @@ jobs:
     needs: docker
     if: github.event_name == 'push' && github.ref_name == 'main'
     runs-on: ubuntu-latest
+    # secrets 는 if 조건에서 직접 못 읽는다 — env 로 옮겨야 step if 에서 참조 가능.
+    env:
+      HAS_EC2: ${{ secrets.EC2_HOST }}
     steps:
       - name: EC2 pull & 재기동
-        if: ${{ secrets.EC2_HOST != '' }}
+        if: env.HAS_EC2 != ''
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
