@@ -71,12 +71,20 @@ WatchList/
 ## 배포 (EC2 — Docker Hub pull, 리포 clone 불필요)
 
 ```
-작업 브랜치 커밋 → main 머지 → CI: pytest → 통과 시 watchlist-bot:latest·:sha 발행
-→ 서버: docker compose pull && docker compose up -d
+작업 브랜치 커밋 → main 머지 → CI: pytest → watchlist-bot:latest·:sha 발행
+→ EC2 자동 pull·재기동 (수동 작업 없음)
 ```
 
-이미지 발행은 **main 머지(push)에서만** 실행됩니다 (GitHub Secrets:
-`DOCKERHUB_USERNAME`·`DOCKERHUB_TOKEN` 필요). 다른 브랜치 push 는 테스트만 돕니다.
+이미지 발행과 배포는 **main 머지(push)에서만** 실행됩니다. 다른 브랜치 push 는 테스트만 돕니다.
+
+필요한 GitHub Secrets:
+
+| 시크릿 | 용도 |
+| --- | --- |
+| `DOCKERHUB_USERNAME`·`DOCKERHUB_TOKEN` | 이미지 발행 |
+| `EC2_HOST`·`EC2_USER`·`EC2_SSH_KEY` | 자동 배포(SSH). **미등록이면 배포 스텝을 건너뛰고** CI 는 통과하므로, 그때는 아래 수동 명령으로 배포합니다 |
+
+`EC2_SSH_KEY` 는 개인키 **전문**(`-----BEGIN ... KEY-----` 줄 포함)을 넣습니다.
 
 ```bash
 # 서버 최초 1회 셋업
@@ -84,7 +92,7 @@ mkdir -p ~/watchlist-bot && cd ~/watchlist-bot
 # deploy/docker-compose.server.yml 내용을 docker-compose.yml 로 저장
 # .env 작성: TELEGRAM_BOT_TOKEN·TELEGRAM_CHAT_ID·CLAUDE_CODE_OAUTH_TOKEN 필수
 
-# 배포(이후 갱신도 동일)
+# 수동 배포 — EC2_* 시크릿을 등록하지 않았을 때만 필요
 docker compose pull && docker compose up -d
 docker logs -f watchlist-bot   # "규칙서 집행봇 시작 — 롱폴링" 확인
 
