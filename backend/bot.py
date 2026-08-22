@@ -120,7 +120,7 @@ def handle_command(text: str) -> None:
         phase = args[0].upper() if args else ""
         if phase not in ("SETUP", "ENTRY", "STEADY"):
             _send("사용법: /phase <SETUP|ENTRY|STEADY>\n"
-                  "SETUP=가동 전 · ENTRY=SGOV→TQQQ 5주 분할 진입기 · STEADY=정상 운용(TQQQ/JEPI)")
+                  "SETUP=가동 전 · ENTRY=SGOV→QLD 5주 분할 진입기 · STEADY=정상 운용(QLD/JEPI)")
             return
         updates = {"phase": phase}
         if phase == "ENTRY":
@@ -184,7 +184,7 @@ def handle_photo(msg: dict) -> None:
     tickers = [p["ticker"] for p in data["positions"]]
     mismatch = rules.portfolio_mismatch(tickers, state["phase"])
     if mismatch:
-        _send(f"⛔ 규칙서 포트폴리오(TQQQ/JEPI{'/SGOV' if state['phase'] == 'ENTRY' else ''})와 "
+        _send(f"⛔ 규칙서 포트폴리오(QLD/JEPI{'/SGOV' if state['phase'] == 'ENTRY' else ''})와 "
               f"불일치하는 종목: {', '.join(mismatch)}\n계산하지 않고 중단합니다.")
         return
 
@@ -202,7 +202,7 @@ def handle_photo(msg: dict) -> None:
 
 
 def _gather_market(phase: str) -> dict:
-    tickers = ["TQQQ", "JEPI"] + (["SGOV"] if phase == "ENTRY" else [])
+    tickers = ["QLD", "JEPI"] + (["SGOV"] if phase == "ENTRY" else [])
     return {
         "ndx": market.ndx_drawdown(),
         "prices": {t: market.last_price(t) for t in tickers},
@@ -293,17 +293,17 @@ def compute_judgment(kind: str, p: dict) -> dict:
     shares = {pos["ticker"]: pos["shares"] for pos in data["positions"]}
     pnl = {pos["ticker"]: pos.get("pnl_krw") for pos in data["positions"]}
     snap = rules.Snapshot(
-        tqqq_shares=shares.get("TQQQ", 0), jepi_shares=shares.get("JEPI", 0),
-        tqqq_price=prices["TQQQ"], jepi_price=prices["JEPI"])
+        qld_shares=shares.get("QLD", 0), jepi_shares=shares.get("JEPI", 0),
+        qld_price=prices["QLD"], jepi_price=prices["JEPI"])
 
     # 대화 비서가 '현재 투자 현황'을 알도록 마지막 확인 잔고 요약(주문 체결 전 기준)
     snapshot = {
         "date": db.today_kst(), "kind": kind,
-        "tqqq_shares": snap.tqqq_shares, "jepi_shares": snap.jepi_shares,
+        "qld_shares": snap.qld_shares, "jepi_shares": snap.jepi_shares,
         "sgov_shares": shares.get("SGOV", 0),
-        "tqqq_price": snap.tqqq_price, "jepi_price": snap.jepi_price,
+        "qld_price": snap.qld_price, "jepi_price": snap.jepi_price,
         "cash_usd": data.get("cash_usd"),
-        "total_usd": snap.total_value, "tqqq_weight": snap.tqqq_weight,
+        "total_usd": snap.total_value, "qld_weight": snap.qld_weight,
         "fx": md["fx"], "drawdown": dd,
         "pnl_krw": {t: pnl.get(t) for t in shares},
     }
@@ -335,7 +335,7 @@ def compute_judgment(kind: str, p: dict) -> dict:
 
     if kind == "entry":
         j = rules.judge_entry(shares.get("SGOV", 0), state["entry_week"],
-                              prices.get("SGOV", 0.0), prices["TQQQ"])
+                              prices.get("SGOV", 0.0), prices["QLD"])
         updates.update(j.state_updates)
         updates["carry_usd"] = state["carry_usd"] + j.carry_delta_usd
         text, log = _render(j, dd, updates, memo="진입기")
@@ -349,9 +349,9 @@ def compute_judgment(kind: str, p: dict) -> dict:
         text, log = _render(j, dd, updates, memo="12월 정기")
         logs = [log]
         if j.action != "12월 리밸런싱 스킵":
-            gains = [(t, pnl[t] / shares[t], shares[t]) for t in ("TQQQ", "JEPI")
+            gains = [(t, pnl[t] / shares[t], shares[t]) for t in ("QLD", "JEPI")
                      if shares.get(t) and pnl.get(t) is not None and pnl[t] > 0]
-            losses = [(t, pnl[t] / shares[t], shares[t]) for t in ("TQQQ", "JEPI")
+            losses = [(t, pnl[t] / shares[t], shares[t]) for t in ("QLD", "JEPI")
                       if shares.get(t) and pnl.get(t) is not None and pnl[t] < 0]
             h = rules.judge_harvest(args["realized_krw"], gains, losses)
             h_text, h_weights = reply_mod.render_judgment(h, dd)
@@ -366,12 +366,12 @@ def compute_judgment(kind: str, p: dict) -> dict:
 
     if kind == "withdraw":
         gain_per = {t: (pnl[t] / shares[t]) if shares.get(t) and pnl.get(t) is not None else None
-                    for t in ("TQQQ", "JEPI")}
+                    for t in ("QLD", "JEPI")}
         j = rules.judge_withdraw(args["need_krw"], md["fx"], snap,
-                                 tqqq_gain_krw_per_share=gain_per["TQQQ"],
+                                 qld_gain_krw_per_share=gain_per["QLD"],
                                  jepi_gain_krw_per_share=gain_per["JEPI"])
         text, log = _render(j, dd, updates, memo="생계 인출 — 정상 절차")
-        if gain_per["TQQQ"] is None and gain_per["JEPI"] is None:
+        if gain_per["QLD"] is None and gain_per["JEPI"] is None:
             text += "\n\n(평가손익을 읽지 못해 예상 실현손익·세금 보고는 생략했습니다.)"
         return {"text": text, "updates": updates, "logs": [log], "intercepted": False, "snapshot": snapshot}
 
