@@ -5,7 +5,7 @@
 
 ## 프로젝트
 
-- **이름 / 설명**: WatchList — TQQQ/JEPI 규칙서 집행봇. 텔레그램으로 잔고 스크린샷을 받아 규칙서(`prompts/rulebook.md`)대로 판정·주문표·로그를 회신한다. 조언자가 아니라 집행자 — 뉴스·전망·추천은 금지된 입력.
+- **이름 / 설명**: WatchList — QLD/JEPI 규칙서 집행봇. 텔레그램으로 잔고 스크린샷을 받아 규칙서(`prompts/rulebook.md`)대로 판정·주문표·로그를 회신한다. 조언자가 아니라 집행자 — 뉴스·전망·추천은 금지된 입력.
 - **스택 / 런타임 버전**: Python 3.12 (requests·yfinance·pandas·pytest), SQLite, Claude Code CLI(`claude -p` 구독 인증 — 이미지에 node+claude 포함), 배포 EC2 공용 서버 Docker 컨테이너 1개(롱폴링 — 공개 포트 없음) + 리마인더는 호스트 cron.
 - **로컬 경로**: 백엔드 전부 `backend/` (봇 `bot.py` · 판정 엔진 `rules.py` · 리마인더 `jobs/reminder.py`), 규칙서 `prompts/`, 테스트 `tests/`.
 - **주요 명령어**:

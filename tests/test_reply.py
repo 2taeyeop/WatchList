@@ -32,20 +32,37 @@ def test_chat_system_prompt_contains_status(db):
     db.update_state(phase="STEADY", monthly_day=25, tier1_fired=True, carry_usd=12.5)
     db.kv_set("last_snapshot", json.dumps({
         "date": "2026-08-07", "kind": "monthly",
-        "tqqq_shares": 120, "jepi_shares": 80, "sgov_shares": 0,
-        "tqqq_price": 72.5, "jepi_price": 57.3, "cash_usd": 44.5,
-        "total_usd": 13284.0, "tqqq_weight": 0.655, "fx": 1425.2, "drawdown": -0.038,
-        "pnl_krw": {"TQQQ": 1200000, "JEPI": -50000},
+        "qld_shares": 120, "jepi_shares": 80, "sgov_shares": 0,
+        "qld_price": 72.5, "jepi_price": 57.3, "cash_usd": 44.5,
+        "total_usd": 13284.0, "qld_weight": 0.655, "fx": 1425.2, "drawdown": -0.038,
+        "pnl_krw": {"QLD": 1200000, "JEPI": -50000},
     }, ensure_ascii=False))
-    db.append_log("월간적립 TQQQ 14주", "-3.8%", "63.1%→65.5%", "월간 루틴", date="2026-08-07")
+    db.append_log("월간적립 QLD 14주", "-3.8%", "63.1%→65.5%", "월간 루틴", date="2026-08-07")
 
     prompt = build_chat_system_prompt()
     assert "[현재 운용 상태]" in prompt
     assert "STEADY" in prompt and "매월 25일" in prompt
     assert "1단 발동됨" in prompt
-    assert "TQQQ 120주" in prompt and "JEPI 80주" in prompt
+    assert "QLD 120주" in prompt and "JEPI 80주" in prompt
     assert "$13,284.00" in prompt
-    assert "월간적립 TQQQ 14주" in prompt  # 최근 기록 주입
+    assert "월간적립 QLD 14주" in prompt  # 최근 기록 주입
+
+
+def test_stale_tqqq_snapshot_does_not_break_status(db):
+    """QLD 전환 전 스냅샷이 남아도 상태 블록 전체가 죽지 않아야 한다."""
+    from backend.reply import build_chat_system_prompt
+    db.update_state(phase="STEADY", monthly_day=25)
+    db.kv_set("last_snapshot", json.dumps({
+        "date": "2026-08-07", "kind": "monthly",
+        "tqqq_shares": 120, "jepi_shares": 80,
+        "tqqq_price": 71.2, "jepi_price": 57.3,
+        "total_usd": 13124.0, "tqqq_weight": 0.651, "fx": 1425.2, "drawdown": -0.038,
+    }, ensure_ascii=False))
+
+    prompt = build_chat_system_prompt()
+    assert "상태 조회 실패" not in prompt
+    assert "QLD 전환 전 기록" in prompt
+    assert "STEADY" in prompt and "매월 25일" in prompt  # 나머지 상태는 살아 있어야
 
 
 def test_chat_system_prompt_contains_full_transcript(db):
@@ -54,7 +71,7 @@ def test_chat_system_prompt_contains_full_transcript(db):
     db.chat_append("user", "/setday 25")
     db.chat_append("bot", "적립일을 매월 25일로 설정했습니다.")
     db.chat_append("user", "[잔고 스크린샷 전송]")
-    db.chat_append("bot", "① 판정: 월간적립 TQQQ 14주 ...")
+    db.chat_append("bot", "① 판정: 월간적립 QLD 14주 ...")
     db.chat_append("user", "고마워 ㅋㅋ")
 
     prompt = build_chat_system_prompt()
@@ -62,7 +79,7 @@ def test_chat_system_prompt_contains_full_transcript(db):
     assert "/setday 25" in prompt
     assert "적립일을 매월 25일로 설정했습니다." in prompt
     assert "[잔고 스크린샷 전송]" in prompt
-    assert "월간적립 TQQQ 14주" in prompt
+    assert "월간적립 QLD 14주" in prompt
     assert "고마워 ㅋㅋ" in prompt
 
 

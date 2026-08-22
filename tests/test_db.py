@@ -30,12 +30,12 @@ def test_update_state_rejects_unknown_column(db):
 
 
 def test_log_append_only_and_format(db):
-    db.append_log("월간적립 TQQQ 13주", "-3.2%", "68.1%→69.4%", "테스트", date="2026-07-22")
+    db.append_log("월간적립 QLD 13주", "-3.2%", "68.1%→69.4%", "테스트", date="2026-07-22")
     db.append_log("가속 1단 발동", "-26.0%", "55.0%→77.0%", date="2026-07-23")
     logs = db.recent_logs()
     assert len(logs) == 2
     assert logs[0]["action"] == "가속 1단 발동"  # 최신 우선
-    assert db.format_log(logs[1]) == "2026-07-22 | 월간적립 TQQQ 13주 | -3.2% | 68.1%→69.4% | 테스트"
+    assert db.format_log(logs[1]) == "2026-07-22 | 월간적립 QLD 13주 | -3.2% | 68.1%→69.4% | 테스트"
 
 
 def test_pending_roundtrip(db):

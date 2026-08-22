@@ -19,7 +19,7 @@ _KST = timezone(timedelta(hours=9))
 RULEBOOK_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts", "rulebook.md")
 
 CRISIS_BANNER = ("⚠️ 이 낙폭은 설계 시 예고된 숫자입니다 (-50%는 사실상 확정 이벤트, "
-                 "TQQQ 줄 -80%는 확률 77%). 허용 행동은 셋: 적립 매수 / 가속 실행 / 무행동.")
+                 "QLD 줄 -80%대는 2008년 실측). 허용 행동은 셋: 적립 매수 / 가속 실행 / 무행동.")
 
 REVISION_NOTICE = ("규칙 밖 매매는 계산을 돕지 않습니다. 개정 절차를 따르세요:\n"
                    "메모장 한 문단 → 72시간 재독 → 개정안 작성, 발효는 위기 모드 해제 후 30일.")
@@ -31,7 +31,7 @@ USAGE = """사용법
 잔고 스크린샷(토스)만 보내면 월간 루틴 판정(/monthly 와 동일)
 
 /monthly — 월간 적립 판정
-/entry — 진입기 주간 루틴(SGOV→TQQQ)
+/entry — 진입기 주간 루틴(SGOV→QLD)
 /december — 12월 리밸런싱 + 공제·손실 수확
 /withdraw <원화금액> — 생계 인출(즉시 협조)
 /log — 최근 기록 10줄
@@ -43,8 +43,8 @@ USAGE = """사용법
 # 봇이 자기 명령어를 설명 못 한다).
 BOT_GUIDE = """- 잔고 스크린샷 전송: 수치 추출 → 확인 게이트([✅ 맞음]/[❌ 다시]) → ✅ 시
   판정·주문표·기록 로그 회신. 명령 없이 사진만 보내면 월간 루틴(/monthly)으로 처리.
-- /monthly: 월간 적립 판정. 달러 예수금 전액으로 TQQQ 비중<70%면 TQQQ, 아니면 JEPI 내림 매수.
-- /entry: 진입기(ENTRY) 주간 루틴. 이번 주차 SGOV 매도(5주 분할, 5주차 전량) → TQQQ 매수.
+- /monthly: 월간 적립 판정. 달러 예수금 전액으로 QLD 비중<70%면 QLD, 아니면 JEPI 내림 매수.
+- /entry: 진입기(ENTRY) 주간 루틴. 이번 주차 SGOV 매도(5주 분할, 5주차 전량) → QLD 매수.
   5회 완료 시 STEADY 자동 전환.
 - /december: 12월 셋째 월요일 리밸런싱 + 공제·손실 수확. 먼저 올해 실현손익 합계를
   숫자로 입력한 뒤 스크린샷을 보낸다. 가속 발동 연도는 자동 스킵.
@@ -52,8 +52,8 @@ BOT_GUIDE = """- 잔고 스크린샷 전송: 수치 추출 → 확인 게이트(
 - /log: 최근 기록 10줄. 형식 `날짜 | 행동 | 하락률 | 비중 전→후 | 메모`.
 - /setday <일>: 매월 적립일 설정(1~31). 해당 일이 없는 달은 말일에 리마인더.
 - /phase <SETUP|ENTRY|STEADY>: 운용 단계 전환 — SETUP=가동 전(사진을 보내도 판정하지 않음),
-  ENTRY=SGOV→TQQQ 5주 분할 진입기(/entry 사용 가능, 전환 시 1주차부터),
-  STEADY=정상 운용(TQQQ/JEPI). 최초 설정 시 /phase 와 /setday 를 먼저 해야 봇이 가동된다.
+  ENTRY=SGOV→QLD 5주 분할 진입기(/entry 사용 가능, 전환 시 1주차부터),
+  STEADY=정상 운용(QLD/JEPI). 최초 설정 시 /phase 와 /setday 를 먼저 해야 봇이 가동된다.
 - /newchat: 비서 기억 초기화. 비서는 채팅방의 모든 내용(명령어·판정 회신·사진·잡담)을
   기억하므로, 처음부터 다시 시작하고 싶을 때만 사용.
 - 자유 질문(명령·사진이 아닌 텍스트): 규칙서 설명, 현재 투자 현황·기록 조회("지금 얼마
@@ -86,7 +86,7 @@ def render_judgment(j: Judgment, drawdown: float) -> tuple[str, str]:
     parts = [f"① 판정: {j.action}"]
     parts.append(f"② 근거: {j.reason} (나스닥100 하락률 {drawdown:.1%})")
     parts.append("③ 주문표\n" + render_orders(j.orders))
-    parts.append(f"④ 실행 후 예상 비중: TQQQ {weights}")
+    parts.append(f"④ 실행 후 예상 비중: QLD {weights}")
     if j.carry_delta_usd:
         parts.append(f"   이월 잔돈: ${j.carry_delta_usd:,.2f}")
     return "\n\n".join(parts), weights
@@ -130,15 +130,17 @@ def _fmt_snapshot(raw: str | None) -> list[str]:
     if not raw:
         return ["- 확인된 잔고 없음(아직 판정 전) — 잔고 사진을 보내면 갱신됩니다."]
     s = json.loads(raw)
+    if "qld_shares" not in s:  # TQQQ 시절 스냅샷 — 종목이 바뀌어 값 자체가 무효
+        return ["- 확인된 잔고 없음(QLD 전환 전 기록) — 잔고 사진을 보내면 갱신됩니다."]
     lines = [f"- 마지막 확인 잔고({s['date']}, {s['kind']} 판정 시·주문 체결 전 기준):"]
-    holdings = [f"TQQQ {s['tqqq_shares']}주(@${s['tqqq_price']:,.2f})",
+    holdings = [f"QLD {s['qld_shares']}주(@${s['qld_price']:,.2f})",
                 f"JEPI {s['jepi_shares']}주(@${s['jepi_price']:,.2f})"]
     if s.get("sgov_shares"):
         holdings.append(f"SGOV {s['sgov_shares']}주")
     lines.append("  보유: " + " · ".join(holdings))
     total_krw = s["total_usd"] * s["fx"]
     lines.append(f"  평가액 합계 ${s['total_usd']:,.2f} (≈{total_krw:,.0f}원, 환율 {s['fx']:,.1f})"
-                 f" · TQQQ 비중 {s['tqqq_weight']:.1%}")
+                 f" · QLD 비중 {s['qld_weight']:.1%}")
     if s.get("cash_usd") is not None:
         lines.append(f"  달러 예수금 ${s['cash_usd']:,.2f}")
     pnl = {t: v for t, v in (s.get("pnl_krw") or {}).items() if v is not None}

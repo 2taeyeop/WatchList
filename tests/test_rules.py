@@ -8,23 +8,23 @@ from backend.rules import (
 
 
 def snap(tq=100, je=100, tp=70.0, jp=55.0) -> Snapshot:
-    return Snapshot(tqqq_shares=tq, jepi_shares=je, tqqq_price=tp, jepi_price=jp)
+    return Snapshot(qld_shares=tq, jepi_shares=je, qld_price=tp, jepi_price=jp)
 
 
 # ---------- A. 월간 적립: 내림·잔돈 이월 ----------
-def test_monthly_buys_tqqq_below_target_with_floor_and_carry():
-    s = snap(tq=50, je=100, tp=73.5, jp=55.0)  # TQQQ 비중 40% < 70%
+def test_monthly_buys_qld_below_target_with_floor_and_carry():
+    s = snap(tq=50, je=100, tp=73.5, jp=55.0)  # QLD 비중 40% < 70%
     j = judge_monthly(s, avail_usd=1000.0)
     assert len(j.orders) == 1
     order = j.orders[0]
-    assert (order.ticker, order.side, order.shares) == ("TQQQ", "BUY", 13)  # floor(1000/73.5)
+    assert (order.ticker, order.side, order.shares) == ("QLD", "BUY", 13)  # floor(1000/73.5)
     assert order.est_usd == pytest.approx(955.5)
     assert j.carry_delta_usd == pytest.approx(44.5)
     assert j.weight_after > j.weight_before
 
 
 def test_monthly_buys_jepi_at_or_above_target():
-    s = snap(tq=100, je=10, tp=70.0, jp=55.0)  # TQQQ 비중 92.7% ≥ 70%
+    s = snap(tq=100, je=10, tp=70.0, jp=55.0)  # QLD 비중 92.7% ≥ 70%
     j = judge_monthly(s, avail_usd=500.0)
     assert j.orders[0].ticker == "JEPI"
     assert j.orders[0].shares == 9  # floor(500/55)
@@ -32,7 +32,7 @@ def test_monthly_buys_jepi_at_or_above_target():
 
 def test_monthly_zero_holdings_counts_as_below_target():
     j = judge_monthly(snap(tq=0, je=0), avail_usd=300.0)
-    assert j.orders[0].ticker == "TQQQ"
+    assert j.orders[0].ticker == "QLD"
 
 
 # ---------- B. 가속 수명주기 ----------
@@ -42,7 +42,7 @@ def test_accel_tier1_fires_at_minus_25():
     assert j is not None
     sell, buy = j.orders
     assert (sell.ticker, sell.side, sell.shares) == ("JEPI", "SELL", 50)   # 101//2
-    assert (buy.ticker, buy.side, buy.shares) == ("TQQQ", "BUY", 55)      # floor(2750/50)
+    assert (buy.ticker, buy.side, buy.shares) == ("QLD", "BUY", 55)      # floor(2750/50)
     assert j.state_updates["tier1_fired"] is True
     assert j.state_updates["skip_december_year"] == 2026
     assert j.state_updates["episode_active"] is True
@@ -106,23 +106,23 @@ def test_december_pass_within_one_share():
     assert j.orders == ()
 
 
-def test_december_sells_excess_tqqq_into_jepi():
-    s = snap(tq=150, je=20, tp=70.0, jp=55.0)  # TQQQ 과체중
+def test_december_sells_excess_qld_into_jepi():
+    s = snap(tq=150, je=20, tp=70.0, jp=55.0)  # QLD 과체중
     j = judge_december(s, 2026, None)
     sell, buy = j.orders
-    assert sell.ticker == "TQQQ" and sell.side == "SELL"
+    assert sell.ticker == "QLD" and sell.side == "SELL"
     assert buy.ticker == "JEPI" and buy.side == "BUY"
     target = 116  # floor(11600*0.7/70)
     assert sell.shares == 150 - target
     assert j.weight_after == pytest.approx(0.70, abs=0.01)
 
 
-def test_december_buys_tqqq_funded_by_jepi():
-    s = snap(tq=50, je=200, tp=70.0, jp=55.0)  # TQQQ 저체중
+def test_december_buys_qld_funded_by_jepi():
+    s = snap(tq=50, je=200, tp=70.0, jp=55.0)  # QLD 저체중
     j = judge_december(s, 2026, None)
     sell, buy = j.orders
     assert sell.ticker == "JEPI"
-    assert buy.ticker == "TQQQ"
+    assert buy.ticker == "QLD"
     target = int((50 * 70 + 200 * 55) * 0.7 // 70)
     assert buy.shares == target - 50
 
@@ -140,20 +140,20 @@ def test_december_not_skipped_next_year():
 
 # ---------- D. 공제 수확 ----------
 def test_harvest_fills_deduction_room():
-    j = judge_harvest(1_000_000, gain_positions=[("TQQQ", 30_000, 100)], loss_positions=[])
+    j = judge_harvest(1_000_000, gain_positions=[("QLD", 30_000, 100)], loss_positions=[])
     sell, rebuy = j.orders
     assert sell.shares == rebuy.shares == 50  # floor(1_500_000/30_000)
     assert sell.side == "SELL" and rebuy.side == "BUY"
 
 
 def test_harvest_capped_by_held_shares():
-    j = judge_harvest(0, gain_positions=[("TQQQ", 10_000, 3)], loss_positions=[])
+    j = judge_harvest(0, gain_positions=[("QLD", 10_000, 3)], loss_positions=[])
     assert j.orders[0].shares == 3
 
 
 def test_harvest_proposes_loss_harvest_over_limit():
     # 초과 500,000원 ÷ 주당 손실 5,000원 = 100주 필요하나 보유 40주로 상한
-    j = judge_harvest(3_000_000, gain_positions=[("TQQQ", 30_000, 100)],
+    j = judge_harvest(3_000_000, gain_positions=[("QLD", 30_000, 100)],
                       loss_positions=[("JEPI", -5_000, 40)])
     assert "손실 수확" in j.action
     assert j.orders[0].ticker == "JEPI"
@@ -176,18 +176,18 @@ def test_harvest_exact_limit_boundary_no_action():
 
 
 def test_harvest_falls_back_to_second_gain_ticker():
-    # 여유 60,000원 < TQQQ 주당 90,000원 → JEPI(20,000원)로 폴백해 3주 수확
-    j = judge_harvest(2_440_000, gain_positions=[("TQQQ", 90_000, 100), ("JEPI", 20_000, 50)],
+    # 여유 60,000원 < QLD 주당 90,000원 → JEPI(20,000원)로 폴백해 3주 수확
+    j = judge_harvest(2_440_000, gain_positions=[("QLD", 90_000, 100), ("JEPI", 20_000, 50)],
                       loss_positions=[])
     assert "JEPI 3주" in j.action
     assert len(j.orders) == 2
 
 
 def test_harvest_continues_across_tickers():
-    # TQQQ 3주(9만) 소진 후 잔여 241만을 JEPI 로 이어서 수확
-    j = judge_harvest(0, gain_positions=[("TQQQ", 30_000, 3), ("JEPI", 10_000, 200)],
+    # QLD 3주(9만) 소진 후 잔여 241만을 JEPI 로 이어서 수확
+    j = judge_harvest(0, gain_positions=[("QLD", 30_000, 3), ("JEPI", 10_000, 200)],
                       loss_positions=[])
-    assert "TQQQ 3주" in j.action and "JEPI 200주" in j.action
+    assert "QLD 3주" in j.action and "JEPI 200주" in j.action
     assert len(j.orders) == 4
 
 
@@ -200,10 +200,10 @@ def test_harvest_no_gain_positions():
 def test_withdraw_ratio_and_ceiling():
     s = snap(tq=1000, je=1000, tp=70.0, jp=55.0)
     j = judge_withdraw(1_400_000, fx=1400.0, snap=s)  # $1,000 필요
-    tqqq, jepi = j.orders
-    assert tqqq.shares == 10  # ceil(700/70)
+    qld, jepi = j.orders
+    assert qld.shares == 10  # ceil(700/70)
     assert jepi.shares == 6   # ceil(300/55)
-    raised = tqqq.est_usd + jepi.est_usd
+    raised = qld.est_usd + jepi.est_usd
     assert raised >= 1000.0   # 필요액 이상 확보(매도는 올림)
 
 
@@ -225,32 +225,32 @@ def test_withdraw_rejects_non_positive_amounts():
 def test_withdraw_reports_realized_pnl():
     s = snap(tq=1000, je=1000, tp=70.0, jp=55.0)
     j = judge_withdraw(1_400_000, 1400.0, s,
-                       tqqq_gain_krw_per_share=50_000, jepi_gain_krw_per_share=-1_000)
+                       qld_gain_krw_per_share=50_000, jepi_gain_krw_per_share=-1_000)
     assert "+500,000원" in j.reason   # 10주 × 5만원
     assert "-6,000원" in j.reason     # 6주 × −1천원
 
 
 # ---------- 진입기 주간 루틴 ----------
 def test_entry_week1_sells_fifth():
-    j = judge_entry(sgov_shares=100, entry_week=1, sgov_price=100.0, tqqq_price=70.0)
+    j = judge_entry(sgov_shares=100, entry_week=1, sgov_price=100.0, qld_price=70.0)
     assert j.orders[0].shares == 20  # 100//5
     assert j.state_updates == {"entry_week": 2}
 
 
 def test_entry_week5_sells_all_and_transitions_steady():
-    j = judge_entry(sgov_shares=23, entry_week=5, sgov_price=100.0, tqqq_price=70.0)
+    j = judge_entry(sgov_shares=23, entry_week=5, sgov_price=100.0, qld_price=70.0)
     assert j.orders[0].shares == 23
     assert j.state_updates == {"phase": "STEADY", "entry_week": 1}
 
 
 # ---------- 포트폴리오 불일치 ----------
 def test_mismatch_detects_foreign_tickers():
-    assert portfolio_mismatch(["TQQQ", "JEPI", "AAPL"], "STEADY") == ["AAPL"]
+    assert portfolio_mismatch(["QLD", "JEPI", "AAPL"], "STEADY") == ["AAPL"]
 
 
 def test_mismatch_allows_sgov_only_in_entry():
-    assert portfolio_mismatch(["TQQQ", "JEPI", "SGOV"], "ENTRY") == []
-    assert portfolio_mismatch(["TQQQ", "JEPI", "SGOV"], "STEADY") == ["SGOV"]
+    assert portfolio_mismatch(["QLD", "JEPI", "SGOV"], "ENTRY") == []
+    assert portfolio_mismatch(["QLD", "JEPI", "SGOV"], "STEADY") == ["SGOV"]
 
 
 def test_mismatch_setup_phase_exempt():
