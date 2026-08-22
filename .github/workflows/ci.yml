@@ -1,4 +1,4 @@
-# CI/CD — 테스트 통과 시 Docker Hub 로 이미지 발행. 서버는 clone 없이 pull 만으로 배포.
+# CI/CD — 테스트 통과 시 Docker Hub 로 이미지 발행 후 EC2 가 자동 pull. 서버는 clone 불필요.
 name: ci
 
 on:
@@ -35,3 +35,25 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/watchlist-bot:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/watchlist-bot:${{ github.sha }}
+
+  deploy:
+    # 이미지 발행 후 EC2 가 새 이미지를 받아 재기동 — 수동 pull 제거.
+    # 시크릿 EC2_HOST·EC2_USER·EC2_SSH_KEY 미등록이면 스텝을 건너뛴다(CI 는 초록 유지).
+    needs: docker
+    if: github.event_name == 'push' && github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: EC2 pull & 재기동
+        if: ${{ secrets.EC2_HOST != '' }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/watchlist-bot
+            docker compose pull
+            # --wait: 기동 실패를 CI 가 잡게(restart 루프로 조용히 죽는 것 방지)
+            docker compose up -d --wait || { docker compose logs --tail 50; exit 1; }
+            docker image prune -f
